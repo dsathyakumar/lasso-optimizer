@@ -3,7 +3,7 @@
     "license": "MIT",
     "author": "dasathyakuma@ebay.com",
     "description": "An optimizer for Lasso JS output bundles",
-    "main": "index.js",
+    "main": "lasso-optimizer-plugin.js",
     "dependencies": {
         "@babel/core": "7.5.5",
         "@babel/generator": "7.5.5",
