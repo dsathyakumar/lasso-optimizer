@@ -1,9 +1,9 @@
 # lasso-optimizer-plugin
->A build / compile time optimizer transform for Lasso JS. Gives (Lasso JS)[http://www.github.com/lasso-js/lasso] some extra arms.
+>A build / compile time optimizer transform for Lasso JS. Gives [Lasso JS](http://www.github.com/lasso-js/lasso) some extra arms.
 
 ## What is this?
-- (Lasso JS)[http://www.github.com/lasso-js/lasso] produces output bundles similar to the NODEJS common-js style syntax on the browser.
-- This is one of the transform stage plugins for (Lasso JS)[http://www.github.com/lasso-js/lasso], that is applied on the final aggregated output of (Lasso JS)[http://www.github.com/lasso-js/lasso].
+- [Lasso JS](http://www.github.com/lasso-js/lasso) produces output bundles similar to the NODEJS common-js style syntax on the browser.
+- This is one of the transform stage plugins for [Lasso JS](http://www.github.com/lasso-js/lasso), that is applied on the final aggregated output of [Lasso JS](http://www.github.com/lasso-js/lasso).
 - It performs code transformations
 
 ## Why is this needed?
