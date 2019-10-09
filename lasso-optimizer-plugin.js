@@ -16,6 +16,6 @@ module.exports = (lasso, pluginConfig) => {
         stream: false,
 
         // Do the magic:
-        transform: (code, lassoContext) => parseAndGenerateCode(code, pluginConfig)
+        transform: (code, lassoContext) => parseAndGenerateCode(code, pluginConfig, lassoContext)
     });
 };
