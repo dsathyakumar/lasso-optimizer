@@ -45,7 +45,8 @@ var __marko_4_17_3__components__runtime = function (require, exports, module) {
 });
 require(__marko_4_17_3__components__runtime);
 ```
-- The `.remap`, `.installed`, `.main`, `.run`, `.builtin`, `resolve`, `require`, `def` are all resolved at runtime.
+- The `.remap`, `.installed`, `.main`, `.run`, `.builtin`, `resolve`, `require`, `def` are all resolved at build / asset bundling phase.
+- On the browser, the bundle doesn't have to resolve these anymore.
 - By doing this, it gets rid of the [Lasso Modules Client Side Run Time](https://github.com/lasso-js/lasso-modules-client) & uses a miniature version of it.
 
 ## Usage
