@@ -20,7 +20,8 @@ $_mod_gh_fe.remap("/marko$4.17.3/src/runtime/components/index", "/marko$4.17.3/s
 ```
 - While they provide a mirror representation of your projects file system, this tends to be of an overhead & bloat for projects.
 - Further, these are resolved on the browser by [Lasso Modules Client Side Run Time](https://github.com/lasso-js/lasso-modules-client) that performs a Node JS style module resolution.
-- Inlined filepaths & the client side runtime take upto ~30KB in your output bundle.
+- Inlined filepaths & the client side runtime take upto ~30KB in your **ungzipped** output bundle & upto 5KB in your **gzipped** response.
+- As JS parse times are impacted by bundle size bloats, this helps optimize the bundle for it.
 
 ## What does this do?
 - This plugin applies an output transform on the code
