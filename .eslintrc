@@ -1,0 +1,21 @@
+{
+    "extends": "ebay",
+    "plugins": [
+        "import",
+        "compat"
+    ],
+    "env": {
+        "browser": true
+    },
+    "rules": {
+        "compat/compat": "warn",
+        "import/order": [2, {"groups": ["builtin", "external", "internal", "parent", "sibling", "index"]}],
+        "no-param-reassign": 0
+    },
+    "parserOptions": {
+        "ecmaVersion": 2017,
+        "ecmaFeatures": {
+            "experimentalObjectRestSpread": true
+        }
+    }
+}
