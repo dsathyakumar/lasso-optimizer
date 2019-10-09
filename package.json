@@ -1,0 +1,23 @@
+{
+    "name": "lasso-plugin-optimizer",
+    "license": "MIT",
+    "author": "dasathyakuma@ebay.com",
+    "description": "An optimizer for Lasso JS output bundles",
+    "main": "index.js",
+    "dependencies": {
+        "@babel/core": "7.5.5",
+        "@babel/generator": "7.5.5",
+        "@babel/helpers": "7.5.5",
+        "@babel/parser": "7.5.5",
+        "@babel/template": "7.4.4",
+        "@babel/traverse": "7.5.5",
+        "@babel/types": "7.5.5",
+        "@ebay/retriever": "1.1.0"
+    },
+    "devDependencies": {
+        "eslint": "^5.16.0",
+        "eslint-config-ebay": "1.1.1",
+        "eslint-plugin-compat": "^3.1.1",
+        "eslint-plugin-import": "^2.14.0"
+    }
+}
