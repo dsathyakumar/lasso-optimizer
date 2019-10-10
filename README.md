@@ -1,10 +1,11 @@
-# lasso-optimizer-plugin
->A build / compile time optimizer transform for Lasso JS. Gives [Lasso JS](http://www.github.com/lasso-js/lasso) some extra arms.
+# lasso-optimizer
+>A build / compile time optimizer for Lasso JS. Gives [Lasso JS](http://www.github.com/lasso-js/lasso) some extra arms.
 
 ## What is this?
 - [Lasso JS](http://www.github.com/lasso-js/lasso) produces output bundles similar to the NODEJS common-js style syntax on the browser.
-- This is one of the transform stage plugins for [Lasso JS](http://www.github.com/lasso-js/lasso), that is applied on the final aggregated output of [Lasso JS](http://www.github.com/lasso-js/lasso).
+- This is an optimizer stage plugin for [Lasso JS](http://www.github.com/lasso-js/lasso), that is applied on the final aggregated output of [Lasso JS](http://www.github.com/lasso-js/lasso).
 - It performs code transformations
+- It cannot be used as a transform or as a usual JS plugin in the list of Lasso plugins
 
 ## Why is this needed?
 - This plugin helps in further optimizing Lasso JS output bundles under certain  conditions, while resolving modules & circular dependencies.
@@ -24,7 +25,7 @@ $_mod_gh_fe.remap("/marko$4.17.3/src/runtime/components/index", "/marko$4.17.3/s
 - As JS parse times are impacted by bundle size bloats, this helps optimize the bundle for it.
 
 ## What does this do?
-- This plugin applies an output transform on the code
+- This plugin applies an output transformation on the final aggregated code / bundle.
 - It attempts to resolve all filepaths and module dependencies at build time
 - It transform modules into simple function expressions
 
@@ -51,8 +52,8 @@ require(__marko_4_17_3__components__runtime);
 - By doing this, it gets rid of the [Lasso Modules Client Side Run Time](https://github.com/lasso-js/lasso-modules-client) & uses a miniature version of it.
 
 ## Usage
-This has to be applied as `transform` in the Lasso config.
-
+- This **cannot** be applied as `transform` in the Lasso config or be used as a **plugin**.
+- The following Lasso Config is a sample where the output would be bundled for production.
 ```json
 {
     "plugins": [
@@ -73,15 +74,30 @@ This has to be applied as `transform` in the Lasso config.
     "require": {
         "lastSlot": "inline",
         "transforms": [
-            "lasso-babel-env",
-            "lasso-optimizer-plugin"
+            "lasso-babel-env"
         ]
     },
+    "outputDir": "static",
     "minify": true,
-    "minifyInlineOnly": false,
+    "minifyInlineOnly": true,
     "bundlingEnabled": true,
     "resolveCssUrls": true,
     "noConflict": "gh-fe",
     "cacheProfile": "production"
 }
+```
+
+Now, the above output would cause Lasso to dump the final minfied output bundled under 
+`${PROJECT_DIR}/static`.
+
+```javascript
+
+const { readFileSync, writeFileSync } = require('fs').readFileSync;
+const lassoOptimizer = require('lasso-optimizer');
+const code = readFileSync('static/my-awesome-bundle.js', 'utf8');
+const result = lassoOptimizer(code);
+writeFileSync('static/optimized-bundle.js', 'utf8');
+
+// now proceed to upload to resource server.
+
 ```
