@@ -1,6 +1,6 @@
 {
     "name": "lasso-optimizer",
-    "version": "0.0.0",
+    "version": "0.0.1",
     "license": "MIT",
     "author": "dasathyakuma@ebay.com",
     "description": "An optimizer for Lasso JS output bundles",
