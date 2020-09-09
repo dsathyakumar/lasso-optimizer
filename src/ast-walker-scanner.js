@@ -160,6 +160,8 @@ const getLassoModulesData = path => {
                 const modulePathToVarRef = args[0].value
                     .replace(new RegExp('/', 'g'), '__')
                     .replace('$', '_')
+                    .replace('[', '_')
+                    .replace(']', '_')
                     .replace(/\./g, '_')
                     .replace(/\-/g, '_');
 
