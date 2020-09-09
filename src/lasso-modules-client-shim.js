@@ -17,6 +17,7 @@ const injectClient = (code, varName) => {
         function Module(funcName) {
             this.id = funcName;
             this.filename = funcName;
+            this.dirname = funcName;
             this.loaded = false;
             this.exports = {};
         }
@@ -38,7 +39,7 @@ const injectClient = (code, varName) => {
                 instanceRequire.cache = _cache;
                 instanceRequire.runtime = ${varName};
 
-                factoryOrObject.call(null, instanceRequire, exports, this, factoryOrObject.name);
+                factoryOrObject.call(null, instanceRequire, exports, this, factoryOrObject.name, factoryOrObject.name);
             } else {
                 this.exports = factoryOrObject;
             }
