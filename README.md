@@ -13,7 +13,12 @@
 
 ```javascript
 $_mod.def("/marko$4.17.3/components/runtime", function (require, exports, module, __filename, __dirname) {
-    // code here
+    const f_55 = require('/marko$4.17.3/components/index-browser.marko');
+    exports.a = 45;
+    exports.func = () => {};
+    module.exports = () => {
+
+   };
 });
 $_mod_gh_fe.remap("/marko$4.17.3/components", "/marko$4.17.3/components-browser.marko");
 $_mod_gh_fe.installed("globalheaderfrontend$25.1.0", "marko", "4.17.3");
@@ -21,7 +26,7 @@ $_mod_gh_fe.remap("/marko$4.17.3/src/runtime/components/index", "/marko$4.17.3/s
 ```
 - While they provide a mirror representation of your projects file system, this tends to be of an overhead & bloat for projects.
 - Further, these are resolved on the browser by [Lasso Modules Client Side Run Time](https://github.com/lasso-js/lasso-modules-client) that performs a Node JS style module resolution.
-- Inlined filepaths & the client side runtime take upto ~30KB in your **ungzipped** output bundle & upto 5KB in your **gzipped** response.
+- Inlined filepaths & the client side runtime take upto >30KB-200KB in your **ungzipped** output bundle & upto 5KB-20KB in your **gzipped** response.
 - As JS parse times are impacted by bundle size bloats, this helps optimize the bundle for it.
 
 ## What does this do?
@@ -42,10 +47,16 @@ $_mod_gh_fe.main("/process$4.17.3", "src/runtime/components/index-browser");
 to 
 
 ```javascript
-var __marko_4_17_3__components__runtime = function (require, exports, module) {
-    // code here
-});
-require(__marko_4_17_3__components__runtime);
+function __marko_4_17_3__components__runtime(require, exports, module, __filename, __dirname) {
+    /* __marko_4_17_3__components_index_browser__marko is already available in toplevel scope */
+    const f_55 = require(__marko_4_17_3__components_index_browser__marko);
+    exports.a = 45;
+    exports.func = () => {};
+    module.exports = () => {
+
+   };
+}
+run(__marko_4_17_3__components__runtime);
 ```
 - The `.remap`, `.installed`, `.main`, `.run`, `.builtin`, `resolve`, `require`, `def` are all resolved at build / asset bundling phase.
 - On the browser, the bundle doesn't have to resolve these anymore.
@@ -53,6 +64,7 @@ require(__marko_4_17_3__components__runtime);
 
 ## Usage
 - This **cannot** be applied as `transform` in the Lasso config or be used as a **plugin**.
+- This **cannot** also resolve **dynamic require calls** where the argument of require is not a **String** but an **identifier** resolved dynamically
 - The following Lasso Config is a sample where the output would be bundled for production.
 ```json
 {
