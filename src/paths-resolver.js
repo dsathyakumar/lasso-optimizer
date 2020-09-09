@@ -79,8 +79,13 @@ const getInstalledVersion = (
         depName = depName.slice(0, depName.indexOf('$'));
     }
 
+    if (typeof installedDepsList === 'undefined') {
+        console.warn(`Nothing installed for module ${modNameVerPath} and ${modNameAndVersion}`);
+        return '';
+    }
+
     // retrieve the version of installed dependency (if exists)
-    return installedDepsList[depName];
+    return installedDepsList[depName] || '';
 };
 
 const resolver = (modNameVerPath, depNameVerPath, meta) => {
