@@ -21,18 +21,42 @@ const injectClient = (code, varName) => {
             this.exports = {};
         }
 
-        function require(func) {
-            if (!_cache[func.name]) {
-                var moduleInstance = new Module(func.name);
+        Module.cache = _cache;
 
-                var exports = moduleInstance.exports;
-                _cache[func.name] = moduleInstance;
+        Module.prototype.load = function(factoryOrObject, require) {
+            if (factoryOrObject && factoryOrObject.constructor === Function) {
+                var exports = this.exports;
+                var instanceRequire = function() {
 
-                func.call(null, require, exports, moduleInstance);
-
-                moduleInstance.loaded = true;
+                };
+                instanceRequire.cache = _cache;
+                instanceRequire.runtime = ${varName};
+                factoryOrObject.call(null, require, exports, moduleInstance, factoryOrObject.name);
+            } else {
+                this.exports = factoryOrObject;
             }
-            return _cache[func.name].exports;
+            moduleInstance.loaded = true;
+        }
+
+        function require(factoryOrObject, refId) {
+            var name = '';
+
+            if (factoryOrObject && factoryOrObject.constructor === Function) {
+                name = factoryOrObject.name;
+            } else if(typeof factoryOrObject === 'object' && refId) {
+                name = refId;
+            } else {
+                console.debug('unknown type');
+            }
+
+            if (!_cache[name]) {
+                var moduleInstance = new Module(name);
+                _cache[name] = moduleInstance;
+                moduleInstance.load(factoryOrObject, require);
+                return moduleInstance.exports;
+            }
+
+            return _cache[name].exports;
         }
 
         function run(func, options) {
