@@ -85,6 +85,16 @@ const walkForDependencies = traversalPath => {
                                             global.___deps.deps.push(
                                                 argsZero.value
                                             );
+                                        } else {
+                                            if (refPathNodeParent.arguments.length > 1) {
+                                                // require call is not a String Literal
+                                                throw new Error(`Cannot optimize multi-argument require()`);
+                                            } else if (refPathNodeParent.arguments.length === 0) {
+                                                throw new Error(`Cannot optimize empty require()`);
+                                            } else if (!(types.isStringLiteral(argsZero))) {
+                                                // require call is not a String Literal
+                                                throw new Error(`Cannot optimize Dynamic require()`);
+                                            }
                                         }
                                     }
                                 } else if (types.isMemberExpression) {
@@ -97,10 +107,16 @@ const walkForDependencies = traversalPath => {
                                     ) {
                                         const argsZero =
                                             refPathNodeParent.arguments[0];
-                                        if (types.isStringLiteral(argsZero)) {
+                                        if (
+                                            types.isStringLiteral(argsZero) &&
+                                            refPathNodeParent.arguments
+                                                .length === 1
+                                        ) {
                                             global.___deps.resolve.push(
                                                 argsZero.value
                                             );
+                                        } else {
+                                            throw new Error('Cannot optimize dynamic require.resolve()');
                                         }
                                     }
                                 } else {
@@ -126,6 +142,7 @@ const getDependencies = (moduleNameAndPath, path) => {
                         walkForDependencies(traversalPath);
                     } catch (e) {
                         console.error(e.message);
+                        console.error(`moduleNameAndPath = ${moduleNameAndPath}`);
                         global.___deps = undefined;
                     } finally {
                         // cos for a given Lasso Module, we know there is only one root CallExpression
