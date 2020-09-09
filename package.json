@@ -1,6 +1,6 @@
 {
     "name": "lasso-optimizer",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "license": "MIT",
     "author": "dasathyakuma@ebay.com",
     "description": "An optimizer for Lasso JS output bundles",
@@ -13,6 +13,8 @@
         "@babel/template": "7.4.4",
         "@babel/traverse": "7.5.5",
         "@babel/types": "7.5.5",
+        "@ebay/retriever": "1.1.0",
+        "nanoid": "2.1.11",
         "@ebay/retriever": "1.1.0"
     },
     "devDependencies": {
