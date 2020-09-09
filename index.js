@@ -17,13 +17,14 @@ const init = code => {
     }
 
     let output = null;
+    let pathInfo = null;
 
     try {
         const ast = parse(code, {
             sourceType: 'script'
         });
 
-        const pathInfo = grabInfoFromAst(ast);
+        pathInfo = grabInfoFromAst(ast);
 
         const { dependencyPathToVarName, meta } = resolvePaths(pathInfo);
 
@@ -43,11 +44,17 @@ const init = code => {
         output = undefined;
     }
 
-    return output;
+    return {
+        output,
+        lassoVariableName: pathInfo.variableName
+    };
 };
 
-const optimize = (code, noConflictLassoVar, shouldInjectClient) => {
-    let output = init(code, noConflictLassoVar);
+const optimize = (code, noConflictLassoVar, shouldInjectClient = true) => {
+    let {
+        output,
+        lassoVariableName
+    } = init(code, noConflictLassoVar);
 
     if (typeof output === 'undefined') {
         console.error(`Lasso-optimizer errored out. Returing code as-is`);
@@ -60,7 +67,7 @@ const optimize = (code, noConflictLassoVar, shouldInjectClient) => {
     }
 
     if (shouldInjectClient) {
-        output = injectClient(output.code, noConflictLassoVar);
+        output = injectClient(output.code, (noConflictLassoVar || lassoVariableName));
     } else {
         output = output.code;
     }
@@ -69,7 +76,7 @@ const optimize = (code, noConflictLassoVar, shouldInjectClient) => {
 };
 
 const optimizeSingleSourceFile = (code, noConflictLassoVar, shouldInjectClient) => {
-    return this.optimize(code, noConflictLassoVar, shouldInjectClient);
+    return optimize(code, noConflictLassoVar, shouldInjectClient);
 };
 
 exports.optimizeSingleSourceFile = optimizeSingleSourceFile;
