@@ -38,11 +38,11 @@ const injectClient = (code, varName) => {
                 instanceRequire.cache = _cache;
                 instanceRequire.runtime = ${varName};
 
-                factoryOrObject.call(null, instanceRequire, exports, moduleInstance, factoryOrObject.name);
+                factoryOrObject.call(null, instanceRequire, exports, this, factoryOrObject.name);
             } else {
                 this.exports = factoryOrObject;
             }
-            moduleInstance.loaded = true;
+            this.loaded = true;
         }
 
         function require(factoryOrObject, refId) {
