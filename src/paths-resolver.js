@@ -208,24 +208,31 @@ const resolvePaths = lassoModulesMeta => {
 
     if (Object.keys(meta.def).length) {
         const defKeys = Object.keys(meta.def);
-        defKeys.forEach(modulePath => {
-            const dependencies = meta.def[modulePath].dependencies.deps;
-            if (dependencies.length) {
-                meta.def[modulePath].dependencies.finalize = {};
-                dependencies.forEach(dep => {
-                    if (!dependencyPathToVarName[dep]) {
-                        const resolvedVarName = resolver(modulePath, dep, meta);
-                        dependencyPathToVarName[dep] = resolvedVarName;
-                        meta.def[modulePath].dependencies.finalize[
-                            dep
-                        ] = resolvedVarName;
-                    } else {
-                        meta.def[modulePath].dependencies.finalize[dep] =
-                            dependencyPathToVarName[dep];
+        try {
+            defKeys.forEach(modulePath => {
+                const dependencies = meta.def[modulePath].dependencies.deps;
+                if (dependencies.length) {
+                    if (!('dependencies' in meta.def[modulePath])) {
+                        throw new Error (`"Dependencies" is undefined in ${modulePath}. Possibly a new type in .def`);
                     }
-                });
-            }
-        });
+                    meta.def[modulePath].dependencies.finalize = {};
+                    dependencies.forEach(dep => {
+                        if (!dependencyPathToVarName[dep]) {
+                            const resolvedVarName = resolver(modulePath, dep, meta);
+                            dependencyPathToVarName[dep] = resolvedVarName;
+                            meta.def[modulePath].dependencies.finalize[
+                                dep
+                            ] = resolvedVarName;
+                        } else {
+                            meta.def[modulePath].dependencies.finalize[dep] =
+                                dependencyPathToVarName[dep];
+                        }
+                    });
+                }
+            });
+        } catch (e) {
+            console.error(`Resolution failed with ${e.message}`);
+        }
         try {
             defKeys.forEach(modulePath => {
                 const dependencies = meta.def[modulePath].dependencies.deps;
