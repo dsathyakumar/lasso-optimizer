@@ -62,6 +62,26 @@ run(__marko_4_17_3__components__runtime);
 - On the browser, the bundle doesn't have to resolve these anymore.
 - By doing this, it gets rid of the [Lasso Modules Client Side Run Time](https://github.com/lasso-js/lasso-modules-client) & uses a miniature version of it.
 
+## What do you get by doing this?
+- All inline file paths are resolved before runtime.
+- Check out the `/sample` folder for the input and output. The input is a bundle of size 404KB and copy paste the output bundle into https://try.terser.org/ with options as
+
+```javascript
+{
+  toplevel: true,
+  compress: {
+    toplevel: true
+  },
+  mangle: {
+    toplevel: true
+  },
+  output: {},
+  parse: {},
+  rename: {},
+}
+```
+**The minified output will now be 250KB.**
+
 ## Usage
 - This **cannot** be applied as `transform` in the Lasso config or be used as a **plugin**.
 - This **cannot** also resolve **dynamic require calls** where the argument of require is not a **String** but an **identifier** resolved dynamically
@@ -104,10 +124,10 @@ Now, the above output would cause Lasso to dump the final minfied output bundled
 
 ```javascript
 
-const { readFileSync, writeFileSync } = require('fs').readFileSync;
-const lassoOptimizer = require('lasso-optimizer');
+const { readFileSync, writeFileSync } = require('fs');
+const { optimizeSingleSourceFile } = require('lasso-optimizer');
 const code = readFileSync('static/my-awesome-bundle.js', 'utf8');
-const result = lassoOptimizer(code);
+const result = optimizeSingleSourceFile(code);
 writeFileSync('static/optimized-bundle.js', 'utf8');
 
 // now proceed to upload to resource server.
