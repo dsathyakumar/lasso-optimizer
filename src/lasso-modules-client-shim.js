@@ -26,12 +26,19 @@ const injectClient = (code, varName) => {
         Module.prototype.load = function(factoryOrObject, require) {
             if (factoryOrObject && factoryOrObject.constructor === Function) {
                 var exports = this.exports;
-                var instanceRequire = function() {
 
+                var instanceRequire = function(target, refId) {
+                    var reqMod = require(target, refId);
+                    return reqMod.exports;
                 };
+                instanceRequire.resolve = function(target, refId) {
+                    var resolvedMod = require(target, refId);
+                    return resolvedMod.id;
+                }
                 instanceRequire.cache = _cache;
                 instanceRequire.runtime = ${varName};
-                factoryOrObject.call(null, require, exports, moduleInstance, factoryOrObject.name);
+
+                factoryOrObject.call(null, instanceRequire, exports, moduleInstance, factoryOrObject.name);
             } else {
                 this.exports = factoryOrObject;
             }
@@ -53,10 +60,10 @@ const injectClient = (code, varName) => {
                 var moduleInstance = new Module(name);
                 _cache[name] = moduleInstance;
                 moduleInstance.load(factoryOrObject, require);
-                return moduleInstance.exports;
+                return moduleInstance;
             }
 
-            return _cache[name].exports;
+            return _cache[name];
         }
 
         function run(func, options) {
