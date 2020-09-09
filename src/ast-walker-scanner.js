@@ -4,6 +4,7 @@
 const { get } = require('@ebay/retriever');
 const traverse = require('@babel/traverse');
 const types = require('@babel/types');
+const nanoid = require('nanoid');
 const {
     isLassoModule,
     getObjectInfo,
@@ -167,7 +168,20 @@ const getLassoModulesData = path => {
 
                 if (types.isFunctionExpression(args[1])) {
                     data.dependencies = getDependencies(args[0].value, path);
+                    data.subtype = 'FunctionExpression';
+                } else if (types.isObjectExpression(args[1])) {
+                    // this is when a JSON file is required and Lasso will not wrap it
+                    // with a function expression as its type JSON.
+                    // we are really not bothered what is exported by this JSON type
+                    // The only ones we are interested is in .loaderMetadata and runoptions
+                    data.dependencies = {
+                        deps: [],
+                        resolve: []
+                    };
+                    data.subtype = 'ObjectExpression';
                 }
+                // todo, there may be args[2] here which is an options
+                // and has the options of setting options.global
             }
         } else if (lassoModuleType === 'remap') {
             // $_mod.remap("/marko$4.15.0/components", "/marko$4.15.0/components-browser.marko");
@@ -508,6 +522,7 @@ const grabInfoFromAst = (ast, noconflict) => {
                         // and not the lasso-moudles-client runtime.
                         const {
                             type,
+                            subtype,
                             path,
                             modulePathToVarRef,
                             dependencies,
@@ -524,9 +539,15 @@ const grabInfoFromAst = (ast, noconflict) => {
                         } = data;
 
                         if (type === 'def') {
+                            let referentialId = '';
+                            if (subtype !== 'FunctionExpression' && subtype === 'ObjectExpression') {
+                                referentialId = nanoid(7);
+                            }
                             lassoModulesMeta.def[path] = {
                                 modulePathToVarRef,
-                                dependencies
+                                dependencies,
+                                subtype,
+                                referentialId
                             };
                         } else if (type === 'main') {
                             lassoModulesMeta.main[modulePath] = {
