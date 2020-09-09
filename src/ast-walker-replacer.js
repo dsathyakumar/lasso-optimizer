@@ -97,6 +97,15 @@ const walkForDependencies = (traversalPath, meta, moduleNameAndPath) => {
                                                     pathToVariableRef
                                                 )
                                             );
+                                            // push the refId if its a JSON type require.
+                                            if (meta.def[argsZero.value].subtype === 'ObjectExpression'
+                                                && meta.def[argsZero.value].referentialId) {
+                                                refPathNodeParent.arguments.push(
+                                                    types.stringLiteral(
+                                                        meta.def[argsZero.value].referentialId
+                                                    )
+                                                );
+                                            }
                                         }
                                     }
                                 } else if (types.isMemberExpression) {
@@ -180,6 +189,9 @@ const getLassoModulesDataAndDefs = (path, meta) => {
                     }
                     data.defParams = args[1].params;
                     data.defBodyDefn = args[1].body;
+                } else if (types.isObjectExpression(args[1])) {
+                    // This is when a JSON file is part of the require.
+                    data.objExpr = args[1];
                 }
             }
         } else if (lassoModuleType === 'remap') {
@@ -309,6 +321,7 @@ const walkAstAndReplace = (ast, dependencyPathToVarName, noconflict, meta) => {
                             type,
                             path,
                             from,
+                            objExpr,
                             defParams,
                             defBodyDefn,
                             modulePath,
@@ -322,12 +335,6 @@ const walkAstAndReplace = (ast, dependencyPathToVarName, noconflict, meta) => {
 
                         if (type === 'def') {
                             console.info(`Replacing Def for ${path}`);
-                            // if (
-                            //     path ===
-                            //     '/onboarding-dialog$0.2.24/dist/components/onboarding-dialog/small/index.marko'
-                            // ) {
-                            //     debugger;
-                            // }
                             let modulePathToVarRef =
                                 dependencyPathToVarName[path] ||
                                 meta.def[path].modulePathToVarRef;
@@ -336,11 +343,6 @@ const walkAstAndReplace = (ast, dependencyPathToVarName, noconflict, meta) => {
                                     `Ast-modification failed. ${path} missing modulePathToVarRef`
                                 );
                             }
-
-                            traversalPath.parentPath.addComment(
-                                'leading',
-                                `Removing type: ${type} of ${path}. Replaced with function declaration ${modulePathToVarRef}`
-                            );
 
                             if (modulePathToVarRef.indexOf('@') !== -1) {
                                 console.info(
@@ -355,15 +357,43 @@ const walkAstAndReplace = (ast, dependencyPathToVarName, noconflict, meta) => {
                                 );
                             }
 
-                            // replace function expr to func decl here.
-                            // we are no longer pruning params here.
-                            // any minifier / obfuscator like uglify / terser will clean it
-                            const funcDeclr = types.functionDeclaration(
-                                types.identifier(modulePathToVarRef),
-                                defParams,
-                                defBodyDefn
-                            );
-                            traversalPath.replaceWith(funcDeclr);
+                            // when its a factory function
+                            if (defParams && defBodyDefn) {
+                                traversalPath.parentPath.addComment(
+                                    'leading',
+                                    `Removing type: ${type} of ${path}. Replaced with function declaration ${modulePathToVarRef}`
+                                );
+    
+                                // replace function expr to func decl here.
+                                // we are no longer pruning params here.
+                                // any minifier / obfuscator like uglify / terser will clean it
+                                const funcDeclr = types.functionDeclaration(
+                                    types.identifier(modulePathToVarRef),
+                                    defParams,
+                                    defBodyDefn
+                                );
+                                traversalPath.replaceWith(funcDeclr);
+                            } else if (objExpr) {
+                                const refId = meta.def[path].referentialId;
+
+                                if (!refId) {
+                                    throw new Error(`referentialId missing for object expression of ${path}`);
+                                }
+
+                                traversalPath.parentPath.addComment(
+                                    'leading',
+                                    `Removing type: ${type} of ${path}. Replaced with variable declaration ${modulePathToVarRef} & refId = ${refId}`
+                                );
+                                // when its an object expression
+                                // say when a JSON file is required.
+                                const varDeclaration = types.variableDeclaration('var', [
+                                    types.variableDeclarator(
+                                        types.identifier(modulePathToVarRef),
+                                        objExpr
+                                    )
+                                ]);
+                                traversalPath.replaceWith(varDeclaration);
+                            }
                         } else if (type === 'main') {
                             traversalPath.parentPath.addComment(
                                 'leading',
@@ -439,7 +469,7 @@ const walkAstAndReplace = (ast, dependencyPathToVarName, noconflict, meta) => {
                             traversalPath.replaceWith(
                                 types.expressionStatement(
                                     types.callExpression(
-                                        types.identifier('require'),
+                                        types.identifier('run'),
                                         callExprArgs
                                     )
                                 )
