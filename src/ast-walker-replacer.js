@@ -6,6 +6,50 @@ const traverse = require('@babel/traverse');
 const types = require('@babel/types');
 const { isLassoModule } = require('./utils');
 
+const getPathToVarRef = (moduleNameAndPath, argsZero, meta) => {
+    if (!moduleNameAndPath || !argsZero || !meta) {
+        throw new Error(`All args to be present for getPathToVarRef()`);
+    }
+    // from the finalized list, get what this path maps to
+    // For eg) require('/marko$4.20.1/dist/components/runtime')
+    let pathToVariableRef =
+        meta.def[moduleNameAndPath]
+            .dependencies.finalize[
+                argsZero.value
+            ];
+
+    // ideally it should have been resolved already. Else throw
+    if (!pathToVariableRef) {
+        throw new Error(
+            `Unresolved dependency ${moduleNameAndPath}`
+        );
+    }
+
+    // check if it was scoped, get rid of @ and replace with 9999
+    if (
+        pathToVariableRef.indexOf(
+            '@'
+        ) !== -1
+    ) {
+        console.info(
+            `old pathToVariableRef = ${pathToVariableRef}`
+        );
+        pathToVariableRef = pathToVariableRef.replace(
+            '@',
+            '9999'
+        );
+        console.info(
+            `old pathToVariableRef = ${pathToVariableRef}`
+        );
+    }
+    console.info(
+        // eslint-disable-next-line max-len
+        `Replaced require('${argsZero.value}') with require(${pathToVariableRef})`
+    );
+
+    return pathToVariableRef;
+};
+
 const isRootFuncExpression = path => {
     let stopAfter = false;
 
@@ -27,6 +71,7 @@ const isRootFuncExpression = path => {
 const walkForDependencies = (traversalPath, meta, moduleNameAndPath) => {
     const paramBindings = traversalPath.scope.getAllBindingsOfKind('param');
     const paramsNodes = traversalPath.node.params;
+
     // require, exports, module, __filename, __dirname in this order
     const paramNames = paramsNodes.map(node => node.name);
     Object.keys(paramBindings).forEach(paramBindingName => {
@@ -43,62 +88,44 @@ const walkForDependencies = (traversalPath, meta, moduleNameAndPath) => {
                 ) {
                     const referencedPaths =
                         paramBindings[paramBindingName].referencePaths;
+
                     referencedPaths.forEach(refPath => {
                         const refPathNode = refPath.node;
+
                         if (types.isIdentifier(refPathNode)) {
                             const refPathNodeParent = refPath.parent;
+
                             if (types.isCallExpression(refPathNodeParent)) {
                                 const callee = refPathNodeParent.callee;
+
                                 if (types.isIdentifier(callee)) {
+                                    // check if its the arg we are looking for
                                     if (
                                         callee.name ===
                                         paramBindings[paramBindingName]
                                             .identifier.name
                                     ) {
+                                        // This should have only 1 argument accessed at arguments[0]
                                         const argsZero =
                                             refPathNodeParent.arguments[0];
+
+                                        // check if its a String based path and if there's only 1 argument
                                         if (
                                             types.isStringLiteral(argsZero) &&
                                             refPathNodeParent.arguments
                                                 .length === 1
                                         ) {
-                                            let pathToVariableRef =
-                                                meta.def[moduleNameAndPath]
-                                                    .dependencies.finalize[
-                                                        argsZero.value
-                                                    ];
-                                            if (!pathToVariableRef) {
-                                                throw new Error(
-                                                    `Unresolved dependency ${moduleNameAndPath}`
-                                                );
-                                            }
-                                            if (
-                                                pathToVariableRef.indexOf(
-                                                    '@'
-                                                ) !== -1
-                                            ) {
-                                                console.info(
-                                                    `old pathToVariableRef = ${pathToVariableRef}`
-                                                );
-                                                pathToVariableRef = pathToVariableRef.replace(
-                                                    '@',
-                                                    '9999'
-                                                );
-                                                console.info(
-                                                    `old pathToVariableRef = ${pathToVariableRef}`
-                                                );
-                                            }
-                                            console.info(
-                                                // eslint-disable-next-line max-len
-                                                `Replaced require('${argsZero.value}') with require(${pathToVariableRef})`
-                                            );
+                                            const pathToVariableRef =
+                                                getPathToVarRef(moduleNameAndPath, argsZero, meta);
+
                                             refPathNodeParent.arguments.pop();
                                             refPathNodeParent.arguments.push(
                                                 types.identifier(
                                                     pathToVariableRef
                                                 )
                                             );
-                                            // push the refId if its a JSON type require.
+
+                                            // push the refId as well if its a JSON type require.
                                             if (meta.def[argsZero.value].subtype === 'ObjectExpression'
                                                 && meta.def[argsZero.value].referentialId) {
                                                 refPathNodeParent.arguments.push(
@@ -111,6 +138,7 @@ const walkForDependencies = (traversalPath, meta, moduleNameAndPath) => {
                                     }
                                 } else if (types.isMemberExpression(callee)) {
                                     // This is for types require.resolve.
+                                    // require.resolve('/marko$4.20.2/src/components/index-browser.marko');
                                     if (
                                         callee.object.name ===
                                             paramBindings[paramBindingName]
@@ -119,11 +147,50 @@ const walkForDependencies = (traversalPath, meta, moduleNameAndPath) => {
                                     ) {
                                         const argsZero =
                                             refPathNodeParent.arguments[0];
-                                        if (types.isStringLiteral(argsZero)) {
-                                            console.info(
-                                                `Not modifying require.resolve call for ${argsZero}`
-                                            );
+
+                                        if (types.isStringLiteral(argsZero) &&
+                                            refPathNodeParent.arguments
+                                                .length === 1
+                                        ) {
+                                            let identifierName = '';
+                                            refPathNodeParent.arguments.pop();
+
+                                            if (meta.def[argsZero.value].subtype === 'ObjectExpression') {
+                                                if (meta.def[argsZero.value].referentialId) {
+                                                    identifierName = meta.def[argsZero.value].referentialId;
+                                                    // replace the args of require.resolve call with either
+                                                    // refID -> StringLiteral
+                                                    // Fr eg) require.resolve('_e53tybxw');
+                                                    refPathNodeParent.arguments.push(
+                                                        types.stringLiteral(
+                                                            identifierName
+                                                        )
+                                                    );
+                                                } else {
+                                                    throw new Error(`RefID not found`);
+                                                }
+                                            } else if (meta.def[argsZero.value].subtype === 'FunctionExpression') {
+                                                identifierName = getPathToVarRef(moduleNameAndPath, argsZero, meta);
+                                                if (!identifierName) {
+                                                    throw new Error(`${moduleNameAndPath} not resolved in require()`);
+                                                }
+                                                // here it should be replaced by a MemberExpression of
+                                                // identifierName.name
+                                                // Fr eg) require.resolve(__webresourcejs_1_0_1__dist__file.name);
+                                                // Runtime, __webresourcejs_1_0_1__dist__file.name will resolve
+                                                // to a string of the function declaration name
+                                                refPathNodeParent.arguments.push(
+                                                    types.memberExpression(
+                                                        types.identifier(identifierName),
+                                                        types.identifier('name')
+                                                    )
+                                                );
+                                            }
+                                        } else {
+                                            throw new Error(`Either is a dynamic .resolve() or has more than 1 args`);
                                         }
+                                    } else {
+                                        console.warn(`Not a .resolve() type. Unknown require.X type`);
                                     }
                                 } else {
                                     // log
