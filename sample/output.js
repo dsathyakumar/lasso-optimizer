@@ -1,3 +1,4 @@
+// eslint-disable
 !(function(win) {
         win.global = win;
 

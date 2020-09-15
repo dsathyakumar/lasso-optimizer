@@ -76,9 +76,27 @@ const optimize = (code, noConflictLassoVar, shouldInjectClient = true) => {
     return output;
 };
 
+/**
+ * Optimize a single source File (assumes you have all the Lasso's output here)
+ * Includes code-split bundles, async bundles.
+ * @param {String} code
+ * @param {String} noConflictLassoVar - The LassoModules Client Runtime variable For eg) $_mod_ua_fe
+ * @param {*} shouldInjectClient - Should the miniature client be injected.
+ */
 // eslint-disable-next-line arrow-body-style
 const optimizeSingleSourceFile = (code, noConflictLassoVar, shouldInjectClient) => {
     return optimize(code, noConflictLassoVar, shouldInjectClient);
+};
+
+/**
+ * Optimize a single source File (assumes you have all the Lasso's output here)
+ * Includes code-split bundles, async bundles.
+ * @param {Array} arrayOfBundleNameAndCode - each entry belongs to a file [{ name: 'main', code: '....' }]
+ * @param {String} noConflictLassoVar - The LassoModules Client Runtime variable For eg) $_mod_ua_fe
+ * @param {*} shouldInjectClient - Should the miniature client be injected.
+ */
+const optimizeMultipleSourceFiles = (arrayOfBundleNameAndCode, noConflictLassoVar, shouldInjectClientInMain) => {
+
 };
 
 exports.optimizeSingleSourceFile = optimizeSingleSourceFile;
