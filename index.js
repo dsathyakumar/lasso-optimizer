@@ -53,6 +53,7 @@ const init = code => {
 const optimize = (code, noConflictLassoVar, shouldInjectClient = true) => {
     let {
         output,
+        // eslint-disable-next-line prefer-const
         lassoVariableName
     } = init(code, noConflictLassoVar);
 
@@ -75,6 +76,7 @@ const optimize = (code, noConflictLassoVar, shouldInjectClient = true) => {
     return output;
 };
 
+// eslint-disable-next-line arrow-body-style
 const optimizeSingleSourceFile = (code, noConflictLassoVar, shouldInjectClient) => {
     return optimize(code, noConflictLassoVar, shouldInjectClient);
 };
