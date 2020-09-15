@@ -13,7 +13,6 @@
         "@babel/template": "7.4.4",
         "@babel/traverse": "7.5.5",
         "@babel/types": "7.5.5",
-        "@ebay/retriever": "1.1.0",
         "nanoid": "2.1.11",
         "@ebay/retriever": "1.1.0"
     },
