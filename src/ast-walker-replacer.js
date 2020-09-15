@@ -345,6 +345,7 @@ const walkAstAndReplace = (ast, dependencyPathToVarName, noconflict, meta) => {
                                 );
                             }
 
+                            // This is because functionNames cannot contain @, which are used in scoped packages
                             if (modulePathToVarRef.indexOf('@') !== -1) {
                                 console.info(
                                     `old modulePathToVarRef = ${modulePathToVarRef}`
@@ -389,6 +390,9 @@ const walkAstAndReplace = (ast, dependencyPathToVarName, noconflict, meta) => {
                                 );
                                 // when its an object expression
                                 // say when a JSON file is required.
+                                // even this we store with the modulePathToVarRef, but a require to this
+                                // will also pass the refID, so we check for refID above. Cos, this cannot be
+                                // accessed as func.name & there is no way to get the name of the variable Identifier
                                 const varDeclaration = types.variableDeclaration('var', [
                                     types.variableDeclarator(
                                         types.identifier(modulePathToVarRef),
