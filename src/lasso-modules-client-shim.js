@@ -1,7 +1,6 @@
-'use strict'
+'use strict';
 
-const injectClient = (code, varName) => {
-    return `!(function(win) {
+const injectClient = (code, varName) => `!(function(win) {
         win.global = win;
 
         var _cache = {};
@@ -28,12 +27,23 @@ const injectClient = (code, varName) => {
             if (factoryOrObject && factoryOrObject.constructor === Function) {
                 var exports = this.exports;
 
+                // ths is the require passed to every function
                 var instanceRequire = function(target, refId) {
                     var reqMod = require(target, refId);
                     return reqMod.exports;
                 };
-                instanceRequire.resolve = function(target, refId) {
-                    var resolvedMod = require(target, refId);
+
+                // called when doing a require.resolve
+                // require.resolve(func) or require.resolve(referentialId)
+                // The idea being, funcs id can be accessed via fun.name
+                // for other stuff we create a referentialID and access based on it.
+                instanceRequire.resolve = function(path) {
+                    if (typeof path !== 'string' && typeof path.constructor === Function) {
+                        path = path.name;
+                    }
+                    var resolvedMod = require(path);
+
+                    // only return the id or filename here
                     return resolvedMod.id;
                 }
                 instanceRequire.cache = _cache;
@@ -46,6 +56,11 @@ const injectClient = (code, varName) => {
             this.loaded = true;
         }
 
+        // factoryOrObject can be a factory function (function declaration) => require(someFunctionDeclarationReference)
+        // factoryOrObject can be a POJS object (of require types for JSON files) => require(someJSObj, refId)
+        // factoryOrObject can be the path from a require.resolve() => require.Resolve(FuncNameOrObjRefID)
+        // For objectReferences since we cannot access it similar to function.name or get object variable identifier.toString
+        // we create a referentialID compileTime and use it to store the object in the requireCache
         function require(factoryOrObject, refId) {
             var name = '';
 
@@ -53,6 +68,9 @@ const injectClient = (code, varName) => {
                 name = factoryOrObject.name;
             } else if(typeof factoryOrObject === 'object' && refId) {
                 name = refId;
+            } else if (typeof factoryOrObject === 'string') {
+                name = factoryOrObject;
+                return _cache[name];
             } else {
                 console.debug('unknown type');
             }
@@ -126,6 +144,5 @@ const injectClient = (code, varName) => {
         ${code}
 
     })(window);`;
-};
 
 exports.injectClient = injectClient;
