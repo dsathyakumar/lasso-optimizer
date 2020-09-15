@@ -192,7 +192,16 @@ const resolver = (modNameVerPath, depNameVerPath, meta) => {
                 console.error(`Def not available for ${depNameVerPath}`);
             }
         }
+
+        // attempting a final passthrough here, to see if it can be resolved from .defs
+        if (!resolvedVarName) {
+            console.warn(`${depNameVerPath} is still not resolved. Attempting a final pass..`);
+            resolvedVarName = resolvePath(depNameVerPath, meta);
+        }
     }
+
+    // eslint-disable-next-line no-console
+    console.info(`resolvedVarName = ${resolvedVarName} for ${depNameVerPath}`);
 
     return resolvedVarName;
 };
@@ -209,19 +218,27 @@ const resolver = (modNameVerPath, depNameVerPath, meta) => {
  * @param {Object} lassoModulesMeta
  */
 const resolvePaths = lassoModulesMeta => {
+    // eslint-disable-next-line compat/compat
     const meta = Object.assign({}, lassoModulesMeta);
 
     const dependencyPathToVarName = {};
 
     if (Object.keys(meta.def).length) {
+        // loop over defs
         const defKeys = Object.keys(meta.def);
         try {
             defKeys.forEach(modulePath => {
-                const dependencies = meta.def[modulePath].dependencies.deps;
+                // ideally a def has to have a dependency, atleast in the form of an []
+                // else, its a new un-recognized type yet.
+                // So far we know a .def can contain either a FunctionExpression type or an ObjectExpressionType.
+                if (!('dependencies' in meta.def[modulePath])) {
+                    throw new Error(`"Dependencies" is undefined in ${modulePath}. Possibly a new type in .def`);
+                }
+                // loop over dependencies + resolve paths
+                // all module dependencies paths and resolveables have to be resolved.
+                let dependencies = meta.def[modulePath].dependencies.deps;
+                dependencies = dependencies.concat(meta.def[modulePath].dependencies.resolve);
                 if (dependencies.length) {
-                    if (!('dependencies' in meta.def[modulePath])) {
-                        throw new Error(`"Dependencies" is undefined in ${modulePath}. Possibly a new type in .def`);
-                    }
                     meta.def[modulePath].dependencies.finalize = {};
                     dependencies.forEach(dep => {
                         if (!dependencyPathToVarName[dep]) {
@@ -240,6 +257,8 @@ const resolvePaths = lassoModulesMeta => {
         } catch (e) {
             console.error(`Resolution failed with ${e.message}`);
         }
+
+        // check if every entry in the list of dependencies has been finalized
         try {
             defKeys.forEach(modulePath => {
                 const dependencies = meta.def[modulePath].dependencies.deps;
@@ -277,6 +296,9 @@ const resolvePaths = lassoModulesMeta => {
             }
         });
     }
+
+    // we are really not bothered about .main, .remap, .installed, .builtin, .searchPaths anymore
+    // They will all be removed and resolved compileTime.
 
     return {
         dependencyPathToVarName,

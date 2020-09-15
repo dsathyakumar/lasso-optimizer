@@ -562,6 +562,7 @@ const grabInfoFromAst = (ast, noconflict) => {
 
                         if (type === 'def') {
                             let referentialId = '';
+                            // For object expressions we create a refID's as they cannot be accessed as func.name
                             if (subtype !== 'FunctionExpression' && subtype === 'ObjectExpression') {
                                 referentialId = nanoid(7);
                             }
