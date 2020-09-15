@@ -59,7 +59,8 @@ const injectClient = (code, varName) => `!(function(win) {
         // factoryOrObject can be a factory function (function declaration) => require(someFunctionDeclarationReference)
         // factoryOrObject can be a POJS object (of require types for JSON files) => require(someJSObj, refId)
         // factoryOrObject can be the path from a require.resolve() => require.Resolve(FuncNameOrObjRefID)
-        // For objectReferences since we cannot access it similar to function.name or get object variable identifier.toString
+        // For objectReferences since we cannot access it similar to function.name or get
+        // object variable identifier.toString
         // we create a referentialID compileTime and use it to store the object in the requireCache
         function require(factoryOrObject, refId) {
             var name = '';
