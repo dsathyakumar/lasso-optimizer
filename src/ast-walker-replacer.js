@@ -65,8 +65,8 @@ const walkForDependencies = (traversalPath, meta, moduleNameAndPath) => {
                                             let pathToVariableRef =
                                                 meta.def[moduleNameAndPath]
                                                     .dependencies.finalize[
-                                                    argsZero.value
-                                                ];
+                                                        argsZero.value
+                                                    ];
                                             if (!pathToVariableRef) {
                                                 throw new Error(
                                                     `Unresolved dependency ${moduleNameAndPath}`
@@ -89,6 +89,7 @@ const walkForDependencies = (traversalPath, meta, moduleNameAndPath) => {
                                                 );
                                             }
                                             console.info(
+                                                // eslint-disable-next-line max-len
                                                 `Replaced require('${argsZero.value}') with require(${pathToVariableRef})`
                                             );
                                             refPathNodeParent.arguments.pop();
@@ -361,9 +362,10 @@ const walkAstAndReplace = (ast, dependencyPathToVarName, noconflict, meta) => {
                             if (defParams && defBodyDefn) {
                                 traversalPath.parentPath.addComment(
                                     'leading',
+                                    // eslint-disable-next-line max-len
                                     `Removing type: ${type} of ${path}. Replaced with function declaration ${modulePathToVarRef}`
                                 );
-    
+
                                 // replace function expr to func decl here.
                                 // we are no longer pruning params here.
                                 // any minifier / obfuscator like uglify / terser will clean it
@@ -382,6 +384,7 @@ const walkAstAndReplace = (ast, dependencyPathToVarName, noconflict, meta) => {
 
                                 traversalPath.parentPath.addComment(
                                     'leading',
+                                    // eslint-disable-next-line max-len
                                     `Removing type: ${type} of ${path}. Replaced with variable declaration ${modulePathToVarRef} & refId = ${refId}`
                                 );
                                 // when its an object expression
