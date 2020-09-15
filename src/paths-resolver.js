@@ -1,6 +1,7 @@
 'use strict';
 
 const isSemVer = () =>
+    // eslint-disable-next-line max-len
     /(?<=^v?|\sv?)(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-(?:0|[1-9]\d*|[\da-z-]*[a-z-][\da-z-]*)(?:\.(?:0|[1-9]\d*|[\da-z-]*[a-z-][\da-z-]*))*)?(?:\+[\da-z-]+(?:\.[\da-z-]+)*)?(?=$|\s)/gi;
 
 const nthIndex = (str, pattern, n) => {
@@ -184,6 +185,7 @@ const resolver = (modNameVerPath, depNameVerPath, meta) => {
                 if (!resolvedVarName) {
                     console.error(`Def not available in builtin for ${depNameVerPath}`);
                 } else {
+                    // eslint-disable-next-line no-console
                     console.info(`Def exists as builtin for ${depNameVerPath}`);
                 }
             } else {
@@ -218,7 +220,7 @@ const resolvePaths = lassoModulesMeta => {
                 const dependencies = meta.def[modulePath].dependencies.deps;
                 if (dependencies.length) {
                     if (!('dependencies' in meta.def[modulePath])) {
-                        throw new Error (`"Dependencies" is undefined in ${modulePath}. Possibly a new type in .def`);
+                        throw new Error(`"Dependencies" is undefined in ${modulePath}. Possibly a new type in .def`);
                     }
                     meta.def[modulePath].dependencies.finalize = {};
                     dependencies.forEach(dep => {
@@ -247,7 +249,7 @@ const resolvePaths = lassoModulesMeta => {
                         if (!finalized[dependency]) {
                             throw new Error(`${dependency} not found in ${modulePath} finalized`);
                         }
-                    })
+                    });
                 }
             });
         } catch (e) {

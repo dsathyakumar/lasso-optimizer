@@ -112,6 +112,9 @@ const walkForDependencies = traversalPath => {
                                             refPathNodeParent.arguments
                                                 .length === 1
                                         ) {
+                                            // gather the string path in require.resolve()
+                                            // we cannot handle dynamic require's here.
+                                            // Its upto teams to be able to require both and then conditionally choose.
                                             global.___deps.resolve.push(
                                                 argsZero.value
                                             );
