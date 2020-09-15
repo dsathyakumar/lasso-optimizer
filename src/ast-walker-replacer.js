@@ -109,7 +109,7 @@ const walkForDependencies = (traversalPath, meta, moduleNameAndPath) => {
                                             }
                                         }
                                     }
-                                } else if (types.isMemberExpression) {
+                                } else if (types.isMemberExpression(callee)) {
                                     // This is for types require.resolve.
                                     if (
                                         callee.object.name ===
