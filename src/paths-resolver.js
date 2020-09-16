@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 'use strict';
 
 const isSemVer = () =>
@@ -201,7 +202,8 @@ const resolver = (modNameVerPath, depNameVerPath, meta) => {
     }
 
     // eslint-disable-next-line no-console
-    console.info(`resolvedVarName = ${resolvedVarName} for ${depNameVerPath}`);
+    console.info(`${depNameVerPath} ----> ${resolvedVarName}`);
+    console.info('\n');
 
     return resolvedVarName;
 };
