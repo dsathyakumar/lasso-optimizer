@@ -1,6 +1,8 @@
 'use strict';
 
-const injectClient = (code, varName) => `!(function(win) {
+const injectClient = (code, varName) => `
+/* eslint-disable */
+!(function(win) {
         win.global = win;
 
         var _cache = {};
