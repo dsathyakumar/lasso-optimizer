@@ -1,3 +1,5 @@
+/* eslint-disable max-len */
+/* eslint-disable no-console */
 'use strict';
 
 const { get } = require('@ebay/retriever');
@@ -97,4 +99,105 @@ exports.isLassoModule = path => {
     }
 
     return isLassoCJSModule;
+};
+
+// Uglify and Terser tend to re-use same variable, once their task is done.
+// In such cases, we'd never be able to say if the reference is a re-assigned reference
+// or still the require reference. In such cases, Babel will report it as a constant violation.
+// So, here we loop over constant violations and based on line numbers, we understand which all
+// referencePaths are fake (due to violation by constants) & are not actually "require" types.
+// All such referencePaths will be pruned away!
+// some times we will have a = a('/marko$4.20.2/src/components/runtime')
+// meaning require is used and the returned result is assigned to itself. These occurences
+// are needed, to resolve the require call.
+exports.pruneReferencePaths = (referencedPaths = [], constantViolations = [], moduleNameAndPath) => {
+    console.warn(`Pruning "require" for ${moduleNameAndPath}`);
+
+    constantViolations.forEach(violationPath => {
+        const violationNode = violationPath.node;
+        const violationLine = violationNode.loc.start.line;
+        const violationCol = violationNode.loc.start.column;
+        referencedPaths = referencedPaths.filter(refPath => {
+            const refNode = refPath.node;
+            const refLine = refNode.loc.start.line;
+            const refCol = refNode.loc.start.column;
+
+            if (refLine < violationLine) {
+                return true;
+            } else if (refLine === violationLine) {
+                if (refCol < violationCol) {
+                    return true;
+                }
+
+                if (
+                    (types.isCallExpression(refPath.parent)) &&
+                    (refPath.parent.arguments.length === 1) &&
+                    (types.isStringLiteral(refPath.parent.arguments[0]))
+                ) {
+                    console.warn(`Including a possible require call: ${refPath.parent.arguments[0].value}`);
+                    return true;
+                }
+
+                if (
+                    (types.isCallExpression(refPath.parent)) &&
+                    (refPath.parent.arguments.length === 1) &&
+                    (types.isIdentifier(refPath.parent.arguments[0]))
+                ) {
+                    console.warn(`Including a possible DYNAMIC require call: ${refPath.parent.arguments[0].name}`);
+                    return true;
+                }
+
+                if (
+                    types.isMemberExpression(refPath.parent) &&
+                    types.isCallExpression(refPath.parentPath.parentPath) &&
+                    (types.isIdentifier(refPath.parent.property)) &&
+                    (refPath.parent.property.name === 'resolve') &&
+                    (refPath.parentPath.parentPath.node.arguments.length === 1) &&
+                    (types.isStringLiteral(refPath.parentPath.parentPath.node.arguments[0]))
+                ) {
+                    console.warn(
+                        `Including a possible require.resolve(): ${refPath.parentPath.parentPath.node.arguments[0].value}`
+                    );
+                    return true;
+                }
+
+                if (
+                    types.isMemberExpression(refPath.parent) &&
+                    types.isCallExpression(refPath.parentPath.parentPath) &&
+                    (types.isIdentifier(refPath.parent.property)) &&
+                    (refPath.parent.property.name === 'resolve') &&
+                    (refPath.parentPath.parentPath.node.arguments.length === 1) &&
+                    (types.isIdentifier(refPath.parentPath.parentPath.node.arguments[0]))
+                ) {
+                    console.warn(
+                        `Including a possible DYNAMIC require.resolve(): ${refPath.parentPath.parentPath.node.arguments[0].name}`
+                    );
+                    return true;
+                }
+
+                console.log('Excluding unknown Type');
+            }
+            // return refLine <= violationLine;
+        });
+    });
+
+    return referencedPaths;
+};
+
+exports.isRootFuncExpression = path => {
+    let stopAfter = false;
+
+    if (path) {
+        const callExprPath = path.parentPath.node;
+        if (types.isCallExpression(callExprPath)) {
+            const calleeObj = callExprPath.callee;
+            if (types.isMemberExpression(calleeObj)) {
+                const obj = calleeObj.object;
+                if (types.isIdentifier(obj) && obj.name.startsWith('$_mod')) {
+                    stopAfter = true;
+                }
+            }
+        }
+    }
+    return stopAfter;
 };
