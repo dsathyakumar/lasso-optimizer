@@ -122,13 +122,20 @@ exports.pruneReferencePaths = (referencedPaths = [], constantViolations = [], mo
             const refLine = refNode.loc.start.line;
             const refCol = refNode.loc.start.column;
 
+            // this is not re-assigned yet. So can be taken safely
             if (refLine < violationLine) {
                 return true;
             } else if (refLine === violationLine) {
+                // its still not re-assigned, so can be taken safely
                 if (refCol < violationCol) {
                     return true;
                 }
 
+                // Stuff below are all re-assignments while being used
+                // like a = a('/marko/src/dist/components')
+                // require()
+                // if un-minified, the func args would nt be changed yet and its easy
+                // else this is the best guesstimate
                 if (
                     (types.isCallExpression(refPath.parent)) &&
                     (refPath.parent.arguments.length === 1) &&
@@ -138,6 +145,7 @@ exports.pruneReferencePaths = (referencedPaths = [], constantViolations = [], mo
                     return true;
                 }
 
+                // dynamic require()
                 if (
                     (types.isCallExpression(refPath.parent)) &&
                     (refPath.parent.arguments.length === 1) &&
@@ -147,6 +155,7 @@ exports.pruneReferencePaths = (referencedPaths = [], constantViolations = [], mo
                     return true;
                 }
 
+                // require.resolve()
                 if (
                     types.isMemberExpression(refPath.parent) &&
                     types.isCallExpression(refPath.parentPath.parentPath) &&
@@ -161,6 +170,7 @@ exports.pruneReferencePaths = (referencedPaths = [], constantViolations = [], mo
                     return true;
                 }
 
+                // dynamic require.resolve
                 if (
                     types.isMemberExpression(refPath.parent) &&
                     types.isCallExpression(refPath.parentPath.parentPath) &&
