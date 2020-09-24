@@ -1,3 +1,4 @@
+/* eslint-disable max-len */
 /* eslint-disable no-console */
 'use strict';
 
@@ -8,7 +9,9 @@ const nanoid = require('nanoid');
 const {
     isLassoModule,
     getObjectInfo,
-    getLoaderObjectInfo
+    isRootFuncExpression,
+    getLoaderObjectInfo,
+    pruneReferencePaths
 } = require('./utils');
 
 const LASSO_PROP_TYPES = {
@@ -22,25 +25,7 @@ const LASSO_PROP_TYPES = {
     loaderMetadata: {}
 };
 
-const isRootFuncExpression = path => {
-    let stopAfter = false;
-
-    if (path) {
-        const callExprPath = path.parentPath.node;
-        if (types.isCallExpression(callExprPath)) {
-            const calleeObj = callExprPath.callee;
-            if (types.isMemberExpression(calleeObj)) {
-                const obj = calleeObj.object;
-                if (types.isIdentifier(obj) && obj.name.startsWith('$_mod')) {
-                    stopAfter = true;
-                }
-            }
-        }
-    }
-    return stopAfter;
-};
-
-const walkForDependencies = traversalPath => {
+const walkForDependencies = (traversalPath, moduleNameAndPath) => {
     global.___deps = {
         deps: [],
         resolve: []
@@ -57,12 +42,27 @@ const walkForDependencies = traversalPath => {
             ) {
                 // in minified output, we cannot find the names
                 // we are basically checking dependencies via .require
+                // and its the 1st in the list
                 if (
                     paramBindings[paramBindingName].identifier.name ===
                     paramNames[0]
                 ) {
-                    const referencedPaths =
+                    let referencedPaths =
                         paramBindings[paramBindingName].referencePaths;
+                    if (!paramBindings[paramBindingName].constant) {
+                        console.warn(
+                            `If using minified output, var representing "require" may be re-assigned
+                            by Terser/Uglify. Lasso-optimizer attempts to prune away such re-assigned paths,
+                            so that they don't result in false "require" types. Starting pruning...`
+                        );
+                        console.warn(`Number of B4 = ${referencedPaths.length}`);
+                        referencedPaths = pruneReferencePaths(
+                            referencedPaths,
+                            paramBindings[paramBindingName].constantViolations,
+                            moduleNameAndPath
+                        );
+                        console.warn(`Number After = ${referencedPaths.length}`);
+                    }
                     referencedPaths.forEach(refPath => {
                         const refPathNode = refPath.node;
                         if (types.isIdentifier(refPathNode)) {
@@ -82,49 +82,58 @@ const walkForDependencies = traversalPath => {
                                             refPathNodeParent.arguments
                                                 .length === 1
                                         ) {
+                                            if (argsZero.value.indexOf('/') === -1 || argsZero.value.indexOf('$') === -1) {
+                                                console.warn(`Weird require path "${argsZero.value}" in "${moduleNameAndPath}". Will resolve if its a builtin..`);
+                                            }
                                             global.___deps.deps.push(
                                                 argsZero.value
                                             );
                                         } else {
                                             if (refPathNodeParent.arguments.length > 1) {
                                                 // require call is not a String Literal
-                                                throw new Error(`Cannot optimize multi-argument require()`);
+                                                console.error(`Cannot optimize multi-argument require() in ${moduleNameAndPath} with args0= "${argsZero.value || argsZero.name}"`);
                                             } else if (refPathNodeParent.arguments.length === 0) {
                                                 throw new Error(`Cannot optimize empty require()`);
                                             } else if (!(types.isStringLiteral(argsZero))) {
                                                 // require call is not a String Literal
-                                                throw new Error(`Cannot optimize Dynamic require()`);
+                                                // eslint-disable-next-line max-len
+                                                console.warn(`Cannot optimize Dynamic require() "${argsZero.name}" in ${moduleNameAndPath}`);
                                             }
-                                        }
-                                    }
-                                } else if (types.isMemberExpression) {
-                                    // This is for types require.resolve.
-                                    if (
-                                        callee.object.name ===
-                                            paramBindings[paramBindingName]
-                                                .identifier.name &&
-                                        callee.property.name === 'resolve'
-                                    ) {
-                                        const argsZero =
-                                            refPathNodeParent.arguments[0];
-                                        if (
-                                            types.isStringLiteral(argsZero) &&
-                                            refPathNodeParent.arguments
-                                                .length === 1
-                                        ) {
-                                            // gather the string path in require.resolve()
-                                            // we cannot handle dynamic require's here.
-                                            // Its upto teams to be able to require both and then conditionally choose.
-                                            global.___deps.resolve.push(
-                                                argsZero.value
-                                            );
-                                        } else {
-                                            throw new Error('Cannot optimize dynamic require.resolve()');
                                         }
                                     }
                                 } else {
                                     // log
                                     console.warn('unknown type of require');
+                                }
+                            } else if (types.isMemberExpression(refPathNodeParent)) {
+                                if (
+                                    refPathNodeParent.object.name ===
+                                        paramBindings[paramBindingName]
+                                            .identifier.name &&
+                                    refPathNodeParent.property.name === 'resolve'
+                                ) {
+                                    const parentCallExprPath = refPath.parentPath.parentPath;
+                                    const argsZero =
+                                        parentCallExprPath.node.arguments[0];
+                                    if (
+                                        types.isStringLiteral(argsZero) &&
+                                        parentCallExprPath.node.arguments
+                                            .length === 1
+                                    ) {
+                                        // eslint-disable-next-line max-len
+                                        console.warn(`Resolving require.resolve() for ${argsZero.value} in ${moduleNameAndPath}`);
+                                        // gather the string path in require.resolve()
+                                        // we cannot handle dynamic require's here.
+                                        // Its upto teams to be able to require both and then conditionally choose.
+                                        global.___deps.resolve.push(
+                                            argsZero.value
+                                        );
+                                    } else {
+                                        // eslint-disable-next-line max-len
+                                        throw new Error(`Cannot optimize dynamic require.resolve() in ${moduleNameAndPath}`);
+                                    }
+                                } else {
+                                    console.warn('Not of type require.resolve()');
                                 }
                             }
                         }
@@ -142,7 +151,7 @@ const getDependencies = (moduleNameAndPath, path) => {
             FunctionExpression(traversalPath) {
                 if (isRootFuncExpression(traversalPath)) {
                     try {
-                        walkForDependencies(traversalPath);
+                        walkForDependencies(traversalPath, moduleNameAndPath);
                     } catch (e) {
                         console.error(e.message);
                         console.error(`moduleNameAndPath = ${moduleNameAndPath}`);
