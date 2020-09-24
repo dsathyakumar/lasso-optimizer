@@ -136,54 +136,63 @@ exports.pruneReferencePaths = (referencedPaths = [], constantViolations = [], mo
                 // require()
                 // if un-minified, the func args would nt be changed yet and its easy
                 // else this is the best guesstimate
+                // Require + Dynamic Require types
+                // since we check for paramName[0], this is most liekly a require only
+                // the arg could be an identifier or a member expression or a function that returns a value
+                // for all we know.
                 if (
                     (types.isCallExpression(refPath.parent)) &&
-                    (refPath.parent.arguments.length === 1) &&
-                    (types.isStringLiteral(refPath.parent.arguments[0]))
+                    (refPath.parent.arguments.length === 1)
                 ) {
-                    console.warn(`Including a possible require call: ${refPath.parent.arguments[0].value}`);
+                    console.warn(`Including a possible require call: 
+                        ${refPath.parent.arguments[0].value || refPath.parent.arguments[0].name}
+                        at ${refLine}:${refCol}`
+                    );
                     return true;
                 }
 
                 // dynamic require()
-                if (
-                    (types.isCallExpression(refPath.parent)) &&
-                    (refPath.parent.arguments.length === 1) &&
-                    (types.isIdentifier(refPath.parent.arguments[0]))
-                ) {
-                    console.warn(`Including a possible DYNAMIC require call: ${refPath.parent.arguments[0].name}`);
-                    return true;
-                }
+                // if (
+                //     (types.isCallExpression(refPath.parent)) &&
+                //     (refPath.parent.arguments.length === 1) &&
+                //     (types.isIdentifier(refPath.parent.arguments[0]))
+                // ) {
+                //     console.warn(`Including a possible DYNAMIC require call: ${refPath.parent.arguments[0].name}`);
+                //     return true;
+                // }
 
-                // require.resolve()
+                // require.resolve() + dynamic require.resolve()
+                // the arg could be an identifier or a member expression or a function that returns a value
+                // for all we know.
                 if (
                     types.isMemberExpression(refPath.parent) &&
                     types.isCallExpression(refPath.parentPath.parentPath) &&
                     (types.isIdentifier(refPath.parent.property)) &&
                     (refPath.parent.property.name === 'resolve') &&
-                    (refPath.parentPath.parentPath.node.arguments.length === 1) &&
-                    (types.isStringLiteral(refPath.parentPath.parentPath.node.arguments[0]))
+                    (refPath.parentPath.parentPath.node.arguments.length === 1)
                 ) {
                     console.warn(
-                        `Including a possible require.resolve(): ${refPath.parentPath.parentPath.node.arguments[0].value}`
+                        `Including a possible require.resolve(): 
+                        ${refPath.parentPath.parentPath.node.arguments[0].value || refPath.parentPath.parentPath.node.arguments[0].name}
+                        at ${refLine}:${refCol}`
                     );
                     return true;
                 }
 
-                // dynamic require.resolve
-                if (
-                    types.isMemberExpression(refPath.parent) &&
-                    types.isCallExpression(refPath.parentPath.parentPath) &&
-                    (types.isIdentifier(refPath.parent.property)) &&
-                    (refPath.parent.property.name === 'resolve') &&
-                    (refPath.parentPath.parentPath.node.arguments.length === 1) &&
-                    (types.isIdentifier(refPath.parentPath.parentPath.node.arguments[0]))
-                ) {
-                    console.warn(
-                        `Including a possible DYNAMIC require.resolve(): ${refPath.parentPath.parentPath.node.arguments[0].name}`
-                    );
-                    return true;
-                }
+                // // dynamic require.resolve
+                // if (
+                //     types.isMemberExpression(refPath.parent) &&
+                //     types.isCallExpression(refPath.parentPath.parentPath) &&
+                //     (types.isIdentifier(refPath.parent.property)) &&
+                //     (refPath.parent.property.name === 'resolve') &&
+                //     (refPath.parentPath.parentPath.node.arguments.length === 1) &&
+                //     (types.isIdentifier(refPath.parentPath.parentPath.node.arguments[0]))
+                // ) {
+                //     console.warn(
+                //         `Including a possible DYNAMIC require.resolve(): ${refPath.parentPath.parentPath.node.arguments[0].name}`
+                //     );
+                //     return true;
+                // }
 
                 console.log('Excluding unknown Type');
             }
