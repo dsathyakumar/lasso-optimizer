@@ -1,14 +1,14 @@
 # lasso-optimizer
->A build / compile time optimizer for Lasso JS. Gives [Lasso JS](http://www.github.com/lasso-js/lasso) some extra arms.
+>A Babel CodeMod plugin that acts as a build / compile time optimizer for Lasso JS. Gives [Lasso JS](http://www.github.com/lasso-js/lasso) some extra arms.
 
 ## What is this?
 - [Lasso JS](http://www.github.com/lasso-js/lasso) produces output bundles similar to the NODEJS common-js style syntax on the browser.
-- This is an optimizer stage plugin for [Lasso JS](http://www.github.com/lasso-js/lasso), that is applied on the final aggregated output of [Lasso JS](http://www.github.com/lasso-js/lasso).
+- This is an optimizer stage plugin & a Babel CodeMod for [Lasso JS](http://www.github.com/lasso-js/lasso), that is applied on the final aggregated output of [Lasso JS](http://www.github.com/lasso-js/lasso).
 - It performs code transformations
 - It cannot be used as a transform or as a usual JS plugin in the list of Lasso plugins
 
 ## Why is this needed?
-- This plugin helps in further optimizing Lasso JS output bundles under certain  conditions, while resolving modules & circular dependencies.
+- This plugin helps in further optimizing Lasso JS output bundles under certain  conditions, while resolving modules, **require.resolve**, **require**, **conditional requires** & circular dependencies.
 - Currrently, Lasso JS inlines the filepaths of modules like
 
 ```javascript
