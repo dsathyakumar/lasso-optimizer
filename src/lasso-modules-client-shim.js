@@ -91,7 +91,7 @@ const injectClient = (code, varName) => `
         function run(func, options) {
             var wait = !options || (options.wait !== false);
             if (wait && !_ready) {
-                return runQueue.push([path, options]);
+                return runQueue.push([func, options]);
             }
 
             require(func);
