@@ -94,6 +94,13 @@ const injectClient = (code, varName) => `
                 return runQueue.push([func, options]);
             }
 
+            // this is added so that Minifers dont get rid of func names and inline stuff as anonymous funcs
+            // we are replacing string caches by cache with func.prototype.name
+            if (typeof func !== 'function' || func.name === '') {
+                console.error('Cannot cache anonymous funcs');
+                return;
+            }
+
             require(func);
         }
 
