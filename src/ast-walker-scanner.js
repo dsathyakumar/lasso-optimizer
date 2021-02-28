@@ -465,9 +465,9 @@ const traverseExpressionStatement = exprStatementPathNode => {
     };
 };
 
-const grabInfoFromAst = (ast, noconflict) => {
+const grabInfoFromAst = (ast, noconflict, pathInfo) => {
     if (ast) {
-        const lassoModulesMeta = Object.assign({}, LASSO_PROP_TYPES);
+        const lassoModulesMeta = pathInfo || Object.assign({}, LASSO_PROP_TYPES);
 
         traverse.default(ast, {
             enter(traversalPath) {
@@ -620,6 +620,34 @@ const grabInfoFromAst = (ast, noconflict) => {
     }
 };
 
+// Basically this aims at unfurling an Expression Statement of Type Sequence Expression
+// which acts as a container of Expression Statements
+// const sanitizeAst = ast => {
+//     traverse.default(ast, {
+//         enter(traversalPath) {
+//             if (types.isExpressionStatement(traversalPath.node)) {
+//                 const expression = traversalPath.node.expression;
+//                 if (types.isSequenceExpression(expression)) {
+//                     const expressionsList = expression.expressions;
+//                     const expressionStatements = expressionsList.filter(exp => {
+//                         if (exp.type === 'CallExpression' || exp.type === 'UnaryExpression') {
+//                             if (exp.type === 'CallExpression') {
+
+//                             } else {
+
+//                             }
+//                             return types.expressionStatement(exp);
+//                         }
+//                     })
+//                     traversalPath.replaceWithMultiple(expressionStatements);
+//                 }
+//             }
+//         }
+//     });
+// };
+
+// exports.sanitizeAst = sanitizeAst;
 exports.getLassoModulesData = getLassoModulesData;
 exports.grabInfoFromAst = grabInfoFromAst;
 exports.traverseExpressionStatement = traverseExpressionStatement;
+exports.LASSO_PROP_TYPES = LASSO_PROP_TYPES;
