@@ -26,7 +26,11 @@ const resolvePath = (path, meta) => {
 
     if (path && meta) {
         if (meta.def[path]) {
-            resolvedVarName = meta.def[path].modulePathToVarRef;
+            // now passes both the altID and the modulePathToVarRef
+            resolvedVarName = {
+                modulePathToVarRef: meta.def[path].modulePathToVarRef,
+                altid: meta.def[path].altid
+            };
         } else if (meta.main[path]) {
             const mainPath = meta.main[path] + meta.main[path].main || '/index';
             resolvedVarName = resolvePath(mainPath, meta);
@@ -202,7 +206,7 @@ const resolver = (modNameVerPath, depNameVerPath, meta) => {
     }
 
     // eslint-disable-next-line no-console
-    console.info(`${depNameVerPath} ----> ${resolvedVarName}`);
+    console.info(`${depNameVerPath} ----> ${JSON.stringify(resolvedVarName)}`);
     console.info('\n');
 
     return resolvedVarName;

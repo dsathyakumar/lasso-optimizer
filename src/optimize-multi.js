@@ -8,8 +8,11 @@ const { walkAstAndReplace } = require('./ast-walker-replacer');
 const { injectClient } = require('./lasso-modules-client-shim-multi');
 const { addWrapper } = require('./lasso-modules-wrapper-shim');
 const { version } = require('../package.json')
+const { propGenerator } = require('./generators');
 
 const init = (codeArr, noConflictLassoVar) => {
+    const generator = propGenerator(2);
+
     if (!codeArr) {
         return;
     }
@@ -35,7 +38,7 @@ const init = (codeArr, noConflictLassoVar) => {
 
         if (astFileArr.length) {
             astFileArr.forEach(astFileObj => {
-                grabInfoFromAst(astFileObj.ast, noConflictLassoVar, pathInfo);
+                grabInfoFromAst(astFileObj.ast, noConflictLassoVar, pathInfo, generator);
             });
         }
 

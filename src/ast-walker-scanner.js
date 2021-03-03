@@ -174,7 +174,7 @@ const getDependencies = (moduleNameAndPath, path) => {
     return data;
 };
 
-const getLassoModulesData = path => {
+const getLassoModulesData = (path, generator) => {
     const data = {};
 
     if (path) {
@@ -196,6 +196,7 @@ const getLassoModulesData = path => {
 
                 data.path = args[0].value;
                 data.modulePathToVarRef = modulePathToVarRef;
+                data.altid = '_f.' + generator.next().value;
 
                 if (types.isFunctionExpression(args[1])) {
                     data.dependencies = getDependencies(args[0].value, path);
@@ -415,7 +416,7 @@ const traverseCallExpression = callExprPath => {
     };
 };
 
-const traverseExpressionStatement = exprStatementPathNode => {
+const traverseExpressionStatement = (exprStatementPathNode, generator) => {
     let isLassoModuleType = false;
     let isLassoModulesClient = false;
     let raptorVariableName = '';
@@ -429,7 +430,7 @@ const traverseExpressionStatement = exprStatementPathNode => {
                 enter(traversalPath) {
                     if (isLassoModule(traversalPath)) {
                         isLassoModuleType = true;
-                        data = getLassoModulesData(traversalPath);
+                        data = getLassoModulesData(traversalPath, generator);
                         traversalPath.stop();
                     } else {
                         const calleeObj = get(traversalPath, 'node.callee', {});
@@ -465,7 +466,7 @@ const traverseExpressionStatement = exprStatementPathNode => {
     };
 };
 
-const grabInfoFromAst = (ast, noconflict, pathInfo) => {
+const grabInfoFromAst = (ast, noconflict, pathInfo, generator) => {
     if (ast) {
         const lassoModulesMeta = pathInfo || Object.assign({}, LASSO_PROP_TYPES);
 
@@ -479,7 +480,7 @@ const grabInfoFromAst = (ast, noconflict, pathInfo) => {
                         data,
                         isRaptorModulesClient,
                         raptorVariableName
-                    } = traverseExpressionStatement(traversalPath);
+                    } = traverseExpressionStatement(traversalPath, generator);
 
                     if (isRaptorModulesClient) {
                         // eslint-disable-next-line prettier/prettier
@@ -555,6 +556,7 @@ const grabInfoFromAst = (ast, noconflict, pathInfo) => {
                             type,
                             subtype,
                             path,
+                            altid,
                             modulePathToVarRef,
                             dependencies,
                             from,
@@ -579,7 +581,8 @@ const grabInfoFromAst = (ast, noconflict, pathInfo) => {
                                 modulePathToVarRef,
                                 dependencies,
                                 subtype,
-                                referentialId
+                                referentialId,
+                                altid
                             };
                         } else if (type === 'main') {
                             lassoModulesMeta.main[modulePath] = {

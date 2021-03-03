@@ -6,9 +6,12 @@ const { grabInfoFromAst } = require('./ast-walker-scanner');
 const { resolvePaths } = require('./paths-resolver');
 const { walkAstAndReplace } = require('./ast-walker-replacer');
 const { injectClient } = require('./lasso-modules-client-shim');
-const { version } = require('../package.json')
+const { version } = require('../package.json');
+const { propGenerator } = require('./generators');
 
-const init = code => {
+const init = (code, noConflictLassoVar) => {
+    const generator = propGenerator(2);
+
     if (!code) {
         return;
     }
@@ -25,7 +28,7 @@ const init = code => {
             sourceType: 'script'
         });
 
-        pathInfo = grabInfoFromAst(ast);
+        pathInfo = grabInfoFromAst(ast, noConflictLassoVar, undefined, generator);
 
         const { dependencyPathToVarName, meta } = resolvePaths(pathInfo);
 

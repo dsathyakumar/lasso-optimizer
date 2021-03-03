@@ -32,27 +32,27 @@ const getPathToVarRef = (moduleNameAndPath, argsZero, meta) => {
 
     // check if it was scoped, get rid of @ and replace with 9999
     if (
-        pathToVariableRef.indexOf(
+        pathToVariableRef && pathToVariableRef.modulePathToVarRef.indexOf(
             '@'
         ) !== -1
     ) {
         console.info(
-            `old pathToVariableRef = ${pathToVariableRef}`
+            `old pathToVariableRef = ${pathToVariableRef.modulePathToVarRef}`
         );
-        pathToVariableRef = pathToVariableRef.replace(
+        pathToVariableRef.modulePathToVarRef = pathToVariableRef.modulePathToVarRef.replace(
             '@',
             '9999'
         );
         console.info(
-            `old pathToVariableRef = ${pathToVariableRef}`
+            `new pathToVariableRef = ${pathToVariableRef.modulePathToVarRef}`
         );
     }
     console.info(
         // eslint-disable-next-line max-len
-        `Replaced require('${argsZero.value}') with require(${pathToVariableRef})`
+        `Replaced require('${argsZero.value}') with require(${pathToVariableRef.altid})`
     );
 
-    return pathToVariableRef;
+    return pathToVariableRef.altid;
 };
 
 const walkForDependencies = (traversalPath, meta, moduleNameAndPath) => {
@@ -229,6 +229,8 @@ const walkForDependencies = (traversalPath, meta, moduleNameAndPath) => {
                                     console.warn('Not of type require.resolve()');
                                 }
                             }
+                        } else {
+                            console.warn('ERR!!!! Unknown type');
                         }
                     });
                 }
@@ -243,9 +245,9 @@ const fixDependencies = (moduleNameAndPath, path, meta) => {
             FunctionExpression(traversalPath) {
                 if (isRootFuncExpression(traversalPath)) {
                     try {
-                        if (moduleNameAndPath === '/marko$4.15.0/dist/components/dom-data') {
-                            debugger;
-                        }
+                        // if (moduleNameAndPath === '/marko$4.15.0/dist/components/dom-data') {
+                            // debugger;
+                        // }
                         walkForDependencies(
                             traversalPath,
                             meta,
@@ -444,11 +446,20 @@ const walkAstAndReplace = (ast, dependencyPathToVarName, noconflict, meta) => {
                         if (type === 'def') {
                             console.info(`Replacing Def for ${path}`);
                             let modulePathToVarRef =
-                                dependencyPathToVarName[path] ||
+                                (dependencyPathToVarName[path] && dependencyPathToVarName[path].modulePathToVarRef) ||
                                 meta.def[path].modulePathToVarRef;
+                            
+                            let altid = (dependencyPathToVarName[path] && dependencyPathToVarName[path].altid) || meta.def[path].altid;
+
                             if (!modulePathToVarRef) {
                                 throw new Error(
                                     `Ast-modification failed. ${path} missing modulePathToVarRef`
+                                );
+                            }
+
+                            if (!altid) {
+                                throw new Error(
+                                    `Ast-modification failed. ${path} missing altid`
                                 );
                             }
 
@@ -482,7 +493,23 @@ const walkAstAndReplace = (ast, dependencyPathToVarName, noconflict, meta) => {
                                     defParams,
                                     defBodyDefn
                                 );
-                                traversalPath.replaceWith(funcDeclr);
+                                traversalPath.replaceWithMultiple([
+                                    funcDeclr,
+                                    types.expressionStatement(types.assignmentExpression(
+                                        '=',
+                                        types.memberExpression(
+                                            types.identifier(
+                                                '_f'
+                                            ),
+                                            types.identifier(
+                                                altid.split('.')[1]
+                                            )
+                                        ),
+                                        types.identifier(
+                                            modulePathToVarRef
+                                        )
+                                    ))
+                                ]);
                             } else if (objExpr) {
                                 const refId = meta.def[path].referentialId;
 
@@ -506,7 +533,25 @@ const walkAstAndReplace = (ast, dependencyPathToVarName, noconflict, meta) => {
                                         objExpr
                                     )
                                 ]);
-                                traversalPath.replaceWith(varDeclaration);
+                                traversalPath.replaceWithMultiple([
+                                    varDeclaration,
+                                    types.expressionStatement(types.assignmentExpression(
+                                        '=',
+                                        types.memberExpression(
+                                            types.identifier(
+                                                '_f'
+                                            ),
+                                            types.identifier(
+                                                altid.split('.')[1]
+                                            )
+                                        ),
+                                        types.identifier(
+                                            modulePathToVarRef
+                                        )
+                                    ))
+                                ]);
+                            } else {
+                                console.warn('No idea what .def this is');
                             }
                         } else if (type === 'main') {
                             traversalPath.parentPath.addComment(
@@ -539,7 +584,7 @@ const walkAstAndReplace = (ast, dependencyPathToVarName, noconflict, meta) => {
                             );
 
                             let modulePathToVarRef =
-                                dependencyPathToVarName[path] ||
+                                (dependencyPathToVarName[path] && dependencyPathToVarName[path].modulePathToVarRef) ||
                                 meta.def[path].modulePathToVarRef;
 
                             if (!modulePathToVarRef) {
