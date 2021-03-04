@@ -8,7 +8,7 @@ const { walkAstAndReplace } = require('./ast-walker-replacer');
 const { injectClient } = require('./lasso-modules-client-shim-multi');
 const { addWrapper } = require('./lasso-modules-wrapper-shim');
 const { version } = require('../package.json')
-const { propGenerator } = require('./generators');
+const { propGenerator } = require('./generator');
 
 const init = (codeArr, noConflictLassoVar) => {
     const generator = propGenerator(2);
