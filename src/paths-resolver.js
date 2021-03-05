@@ -29,7 +29,8 @@ const resolvePath = (path, meta) => {
             // now passes both the altID and the modulePathToVarRef
             resolvedVarName = {
                 modulePathToVarRef: meta.def[path].modulePathToVarRef,
-                altid: meta.def[path].altid
+                altid: meta.def[path].altid,
+                reserved: meta.def[path].reserved
             };
         } else if (meta.main[path]) {
             const mainPath = meta.main[path] + meta.main[path].main || '/index';
@@ -226,7 +227,7 @@ const resolver = (modNameVerPath, depNameVerPath, meta) => {
 const resolvePaths = lassoModulesMeta => {
     // eslint-disable-next-line compat/compat
     const meta = Object.assign({}, lassoModulesMeta);
-
+    const reservedCollection = new Set();
     const dependencyPathToVarName = {};
 
     if (Object.keys(meta.def).length) {
@@ -253,6 +254,7 @@ const resolvePaths = lassoModulesMeta => {
                             meta.def[modulePath].dependencies.finalize[
                                 dep
                             ] = resolvedVarName;
+                            reservedCollection.add(resolvedVarName.reserved);
                         } else {
                             meta.def[modulePath].dependencies.finalize[dep] =
                                 dependencyPathToVarName[dep];
@@ -287,17 +289,21 @@ const resolvePaths = lassoModulesMeta => {
         const runKeys = Object.keys(meta.run);
         runKeys.forEach(runnableModPath => {
             if (!dependencyPathToVarName[runnableModPath]) {
-                dependencyPathToVarName[runnableModPath] = resolvePath(
+                const resolvedPath = resolvePath(
                     runnableModPath,
                     meta
-                );
+                )
+                dependencyPathToVarName[runnableModPath] = resolvedPath;
+                reservedCollection.add(resolvedPath.reserved);
             }
             // Then this runnable depends on another module, which also has to be resolved.
             if (typeof runKeys[runnableModPath] === 'string') {
                 if (!dependencyPathToVarName[runKeys[runnableModPath]]) {
+                    const resolvedPath = resolvePath(runKeys[runnableModPath], meta);
                     dependencyPathToVarName[
                         runKeys[runnableModPath]
-                    ] = resolvePath(runKeys[runnableModPath], meta);
+                    ] = resolvedPath;
+                    reservedCollection.add(resolvedPath.reserved);
                 }
             }
         });
@@ -308,7 +314,8 @@ const resolvePaths = lassoModulesMeta => {
 
     return {
         dependencyPathToVarName,
-        meta
+        meta,
+        reservedCollection
     };
 };
 

@@ -23,7 +23,7 @@ const init = (codeArr, noConflictLassoVar) => {
 
     let outputFileArr = null;
     const pathInfo = Object.assign({}, LASSO_PROP_TYPES);
-
+    let reserved = null;
     try {
 
         const astFileArr = codeArr.map(codeFile => {
@@ -42,8 +42,8 @@ const init = (codeArr, noConflictLassoVar) => {
             });
         }
 
-        const { dependencyPathToVarName, meta } = resolvePaths(pathInfo);
-
+        const { dependencyPathToVarName, meta, reservedCollection } = resolvePaths(pathInfo);
+        reserved = reservedCollection;
         const modifiedAstFileArr = astFileArr.map(astFileObj => {
             const modifiedAst = walkAstAndReplace(
                 astFileObj.ast,
@@ -75,6 +75,7 @@ const init = (codeArr, noConflictLassoVar) => {
     }
 
     return {
+        reserved,
         outputFileArr,
         lassoVariableName: pathInfo.variableName
     };
@@ -84,7 +85,8 @@ exports.optimizeMulti = (codeArr, noConflictLassoVar, shouldInjectClient = true)
     const {
         outputFileArr,
         // eslint-disable-next-line prefer-const
-        lassoVariableName
+        lassoVariableName,
+        reserved
     } = init(codeArr, noConflictLassoVar);
 
     if (typeof outputFileArr === 'undefined') {
@@ -107,5 +109,8 @@ exports.optimizeMulti = (codeArr, noConflictLassoVar, shouldInjectClient = true)
         });
     }
 
-    return outputFileArr;
+    return {
+        outputFileArr,
+        reserved
+    };
 };

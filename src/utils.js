@@ -4,6 +4,45 @@
 
 const { get } = require('@ebay/retriever');
 const types = require('@babel/types');
+const RESERVEDLIST = [
+    'do',
+    'if',
+    'var',
+    'for',
+    'in',
+    'let',
+    'try',
+    'eval',
+    'null',
+    'new',
+    'int',
+    'this',
+    'case',
+    'void',
+    'true',
+    'enum',
+    'with',
+    'goto',
+    'char',
+    'long',
+    'Math',
+    'NaN',
+    'Date',
+    'name',
+    'all',
+    'top',
+    'form',
+    'link',
+    'self'
+]
+
+exports.getNextValidValue = generator => {
+    const value = generator.next().value;
+    if (RESERVEDLIST.indexOf(value) === -1) {
+        return value;
+    }
+    return this.getNextValidValue(generator);
+};
 
 exports.getObjectInfo = objExpr => {
     const data = {};

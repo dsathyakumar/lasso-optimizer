@@ -448,7 +448,8 @@ const walkAstAndReplace = (ast, dependencyPathToVarName, noconflict, meta) => {
                             let modulePathToVarRef =
                                 (dependencyPathToVarName[path] && dependencyPathToVarName[path].modulePathToVarRef) ||
                                 meta.def[path].modulePathToVarRef;
-                            
+                            let reserved = (dependencyPathToVarName[path] && dependencyPathToVarName[path].reserved) ||
+                                meta.def[path].reserved;
                             let altid = (dependencyPathToVarName[path] && dependencyPathToVarName[path].altid) || meta.def[path].altid;
 
                             if (!modulePathToVarRef) {
@@ -489,10 +490,12 @@ const walkAstAndReplace = (ast, dependencyPathToVarName, noconflict, meta) => {
                                 // we are no longer pruning params here.
                                 // any minifier / obfuscator like uglify / terser will clean it
                                 const funcDeclr = types.functionDeclaration(
-                                    types.identifier(modulePathToVarRef),
+                                    types.identifier(reserved),
                                     defParams,
                                     defBodyDefn
                                 );
+                                // this basically set the scope bridge
+                                // _f.AA = <function name identifier>
                                 traversalPath.replaceWithMultiple([
                                     funcDeclr,
                                     types.expressionStatement(types.assignmentExpression(
@@ -506,7 +509,7 @@ const walkAstAndReplace = (ast, dependencyPathToVarName, noconflict, meta) => {
                                             )
                                         ),
                                         types.identifier(
-                                            modulePathToVarRef
+                                            reserved
                                         )
                                     ))
                                 ]);
@@ -586,6 +589,8 @@ const walkAstAndReplace = (ast, dependencyPathToVarName, noconflict, meta) => {
                             let modulePathToVarRef =
                                 (dependencyPathToVarName[path] && dependencyPathToVarName[path].modulePathToVarRef) ||
                                 meta.def[path].modulePathToVarRef;
+                            let reserved = (dependencyPathToVarName[path] && dependencyPathToVarName[path].reserved) ||
+                                meta.def[path].reserved;
 
                             if (!modulePathToVarRef) {
                                 throw new Error(
@@ -611,13 +616,13 @@ const walkAstAndReplace = (ast, dependencyPathToVarName, noconflict, meta) => {
                             if (typeof runOptions === 'string') {
                                 // this is a path & has to be resolved
                                 runOptions =
-                                    dependencyPathToVarName[runOptions];
+                                    dependencyPathToVarName[runOptions].reserved;
                                 // it has to be an identifier
                                 runOptions = types.identifier(runOptions);
                             }
 
                             const callExprArgs = [
-                                types.identifier(modulePathToVarRef)
+                                types.identifier(reserved)
                             ];
 
                             if (typeof runOptions !== 'undefined') {

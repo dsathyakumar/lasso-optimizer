@@ -11,7 +11,8 @@ const {
     getObjectInfo,
     isRootFuncExpression,
     getLoaderObjectInfo,
-    pruneReferencePaths
+    pruneReferencePaths,
+    getNextValidValue,
 } = require('./utils');
 
 const LASSO_PROP_TYPES = {
@@ -194,9 +195,11 @@ const getLassoModulesData = (path, generator) => {
                     .replace(/\./g, '_')
                     .replace(/\-/g, '_');
 
+                const altid = getNextValidValue(generator);
                 data.path = args[0].value;
                 data.modulePathToVarRef = modulePathToVarRef;
-                data.altid = '_f.' + generator.next().value;
+                data.altid = '_f.' + altid;
+                data.reserved = altid;
 
                 if (types.isFunctionExpression(args[1])) {
                     data.dependencies = getDependencies(args[0].value, path);
@@ -553,6 +556,7 @@ const grabInfoFromAst = (ast, noconflict, pathInfo, generator) => {
                         // here since we are collecting info, we are only interested in Lasso Modules
                         // and not the lasso-moudles-client runtime.
                         const {
+                            reserved,
                             type,
                             subtype,
                             path,
@@ -578,6 +582,7 @@ const grabInfoFromAst = (ast, noconflict, pathInfo, generator) => {
                                 referentialId = nanoid(7);
                             }
                             lassoModulesMeta.def[path] = {
+                                reserved,
                                 modulePathToVarRef,
                                 dependencies,
                                 subtype,
