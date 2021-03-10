@@ -306,8 +306,8 @@ const getLassoModulesDataAndDefs = (path, meta) => {
                     if (args[2].properties.length === 1) {
                         const property = args[2].properties[0];
                         if (
-                            types.isIdentifier(property.key) &&
-                            property.key.name === 'globals'
+                            types.isStringLiteral(property.key) &&
+                            property.key.value === 'globals'
                         ) {
                             if (types.isArrayExpression(property.value)) {
                                 data.globals = args[2];

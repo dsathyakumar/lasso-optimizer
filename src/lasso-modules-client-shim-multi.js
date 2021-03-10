@@ -7,10 +7,18 @@ const injectClient = (code, varName) => `
     var _pvt = [];
 
     var ___$_set = function(func, options) {
-        _pvt.push({
+        var _len = _pvt.push({
             o:options,
             def: func
         });
+        if (options && options.globals) {
+            var _target = win || global;
+            var _fob = _pvt[(_len - 1)];
+            var _globalMod = require({id: (_len - 1), obj: _fob});
+            for(var counter = 0; counter < (options.globals.length); counter++) {
+                _target[options.globals[counter]] = (_globalMod && _globalMod.exports);
+            }
+        }
     };
 
     var ___$_get = function(idx) {
@@ -100,13 +108,13 @@ const injectClient = (code, varName) => `
             _cache[name] = moduleInstance;
             moduleInstance.load(obj, require);
 
-            if (opts && opts.globals) {
-                var target = win || global;
-                var globalMod = require(factoryOrObject);
-                for (var i=0; i < opts.globals.length; i++) {
-                    target[opts.globals[i]] = globalMod;
-                }
-            }
+            // if (opts && opts.globals) {
+                // var target = win || global;
+                // var globalMod = require(factoryOrObject);
+                // for (var i=0; i < opts.globals.length; i++) {
+                    // target[opts.globals[i]] = globalMod;
+                // }
+            // }
 
             return moduleInstance;
         }
