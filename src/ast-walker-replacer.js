@@ -476,7 +476,7 @@ const walkAstAndReplace = (ast, dependencyPathToVarName, noconflict, meta) => {
                                 );
                             }
 
-                            if (!altid) {
+                            if (typeof altid === 'undefined') {
                                 throw new Error(
                                     `Ast-modification failed. ${path} missing altid`
                                 );
