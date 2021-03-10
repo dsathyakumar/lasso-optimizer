@@ -122,7 +122,7 @@ const walkForDependencies = (traversalPath, meta, moduleNameAndPath) => {
                                             // replace the require path with get(numeriliteral).
                                             refPathNodeParent.arguments.push(
                                                 types.callExpression(
-                                                    types.identifier('get'),
+                                                    types.identifier('___$_get'),
                                                     [
                                                         types.numericLiteral(
                                                             pathToVariableRef.altid
@@ -194,7 +194,7 @@ const walkForDependencies = (traversalPath, meta, moduleNameAndPath) => {
                                         // to a string of the function declaration name
                                         parentCallExprPath.node.arguments.push(
                                             types.callExpression(
-                                                types.identifier('get'),
+                                                types.identifier('___$_get'),
                                                 [
                                                     types.numericLiteral(
                                                         identifierName.altid
@@ -506,7 +506,7 @@ const walkAstAndReplace = (ast, dependencyPathToVarName, noconflict, meta) => {
                                 traversalPath.replaceWithMultiple([
                                     types.expressionStatement(
                                         types.CallExpression(
-                                            types.identifier('set'),
+                                            types.identifier('___$_set'),
                                             args
                                         )
                                     )
@@ -537,7 +537,7 @@ const walkAstAndReplace = (ast, dependencyPathToVarName, noconflict, meta) => {
                                     varDeclaration,
                                     types.expressionStatement(
                                         types.CallExpression(
-                                            types.identifier('set'),
+                                            types.identifier('___$_set'),
                                             [
                                                 types.identifier(
                                                     modulePathToVarRef
@@ -600,13 +600,13 @@ const walkAstAndReplace = (ast, dependencyPathToVarName, noconflict, meta) => {
                                     meta.def[runOptions].altid;
                                 // it has to be an identifier
                                 runOptions = types.callExpression(
-                                    types.identifier('get'),
+                                    types.identifier('___$_get'),
                                     [types.numericLiteral(optionalAltId)]
                                 );
                             }
 
                             const callExprArgs = [
-                                types.callExpression(types.identifier('get'), [
+                                types.callExpression(types.identifier('___$_get'), [
                                     types.numericLiteral(altid)
                                 ])
                             ];
@@ -620,7 +620,7 @@ const walkAstAndReplace = (ast, dependencyPathToVarName, noconflict, meta) => {
                             traversalPath.replaceWith(
                                 types.expressionStatement(
                                     types.callExpression(
-                                        types.identifier('run'),
+                                        types.identifier('___$_run'),
                                         callExprArgs
                                     )
                                 )

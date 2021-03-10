@@ -6,14 +6,14 @@ const injectClient = (code, varName) => `
     win.global = win;
     var _pvt = [];
 
-    var set = function(func, options) {
+    var ___$_set = function(func, options) {
         _pvt.push({
             o:options,
             def: func
         });
     };
 
-    var get = function(idx) {
+    var ___$_get = function(idx) {
         return {
             obj: _pvt[idx],
             id: idx
@@ -88,9 +88,10 @@ const injectClient = (code, varName) => `
         if (typeof factoryOrObject === 'string') {
             name = factoryOrObject;
             return _cache[name];
-        } else if(id) { // all other function definitions / object expressions
+        } else if(typeof id !== 'undefined') { // all other function definitions / object expressions
             name = id;
         } else {
+            console.debug(factoryOrObject);
             console.debug('unknown type');
         }
 
@@ -113,7 +114,7 @@ const injectClient = (code, varName) => `
         return _cache[name];
     }
 
-    function run(func, options) {
+    function ___$_run(func, options) {
         var wait = !options || (options.wait !== false);
         if (wait && !_ready) {
             return runQueue.push([func, options]);
@@ -144,7 +145,7 @@ const injectClient = (code, varName) => `
 
             for (var i = 0; i < len; i++) {
                 var args = queue[i];
-                run(args[0], args[1]);
+                ___$_run(args[0], args[1]);
             }
 
             // stop running jobs in the queue if we change to not ready
@@ -164,7 +165,7 @@ const injectClient = (code, varName) => `
 
     Module.prototype.__runtime = ${varName} = {
         ready: ready,
-        run: run,
+        run: ___$_run,
         require: require,
         pending: function() {
             _ready = false;
@@ -177,8 +178,8 @@ const injectClient = (code, varName) => `
             Module.prototype.__loaderMetadata = data;
         },
         c: _cache,
-        set: set,
-        get: get
+        set: ___$_set,
+        get: ___$_get
     };
 
     win ? win.${varName} = ${varName} : module.exports = ${varName};

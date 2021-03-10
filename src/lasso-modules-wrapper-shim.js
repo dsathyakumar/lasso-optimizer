@@ -2,7 +2,7 @@
 
 const addWrapper = (code, varName) => `
 /* eslint-disable */
-!(function(get, set, run) {
+!(function(___$_get, ___$_set, ___$_run) {
     ${code}
 })(${varName}.get, ${varName}.set, ${varName}.run);
 `;
