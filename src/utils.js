@@ -4,44 +4,9 @@
 
 const { get } = require('@ebay/retriever');
 const types = require('@babel/types');
-const RESERVEDLIST = [
-    'do',
-    'if',
-    'var',
-    'for',
-    'in',
-    'let',
-    'try',
-    'eval',
-    'null',
-    'new',
-    'int',
-    'this',
-    'case',
-    'void',
-    'true',
-    'enum',
-    'with',
-    'goto',
-    'char',
-    'long',
-    'Math',
-    'NaN',
-    'Date',
-    'name',
-    'all',
-    'top',
-    'form',
-    'link',
-    'self'
-]
 
 exports.getNextValidValue = generator => {
-    const value = generator.next().value;
-    if (RESERVEDLIST.indexOf(value) === -1) {
-        return value;
-    }
-    return this.getNextValidValue(generator);
+    return generator.next().value;
 };
 
 exports.getObjectInfo = objExpr => {
@@ -149,7 +114,11 @@ exports.isLassoModule = path => {
 // some times we will have a = a('/marko$4.20.2/src/components/runtime')
 // meaning require is used and the returned result is assigned to itself. These occurences
 // are needed, to resolve the require call.
-exports.pruneReferencePaths = (referencedPaths = [], constantViolations = [], moduleNameAndPath) => {
+exports.pruneReferencePaths = (
+    referencedPaths = [],
+    constantViolations = [],
+    moduleNameAndPath
+) => {
     console.warn(`Pruning "require" for ${moduleNameAndPath}`);
 
     constantViolations.forEach(violationPath => {
@@ -180,13 +149,15 @@ exports.pruneReferencePaths = (referencedPaths = [], constantViolations = [], mo
                 // the arg could be an identifier or a member expression or a function that returns a value
                 // for all we know.
                 if (
-                    (types.isCallExpression(refPath.parent)) &&
-                    (refPath.parent.arguments.length === 1)
+                    types.isCallExpression(refPath.parent) &&
+                    refPath.parent.arguments.length === 1
                 ) {
                     console.warn(`Including a possible require call: 
-                        ${refPath.parent.arguments[0].value || refPath.parent.arguments[0].name}
-                        at ${refLine}:${refCol}`
-                    );
+                        ${
+                            refPath.parent.arguments[0].value ||
+                            refPath.parent.arguments[0].name
+                        }
+                        at ${refLine}:${refCol}`);
                     return true;
                 }
 
@@ -206,13 +177,17 @@ exports.pruneReferencePaths = (referencedPaths = [], constantViolations = [], mo
                 if (
                     types.isMemberExpression(refPath.parent) &&
                     types.isCallExpression(refPath.parentPath.parentPath) &&
-                    (types.isIdentifier(refPath.parent.property)) &&
-                    (refPath.parent.property.name === 'resolve') &&
-                    (refPath.parentPath.parentPath.node.arguments.length === 1)
+                    types.isIdentifier(refPath.parent.property) &&
+                    refPath.parent.property.name === 'resolve' &&
+                    refPath.parentPath.parentPath.node.arguments.length === 1
                 ) {
                     console.warn(
                         `Including a possible require.resolve(): 
-                        ${refPath.parentPath.parentPath.node.arguments[0].value || refPath.parentPath.parentPath.node.arguments[0].name}
+                        ${
+                            refPath.parentPath.parentPath.node.arguments[0]
+                                .value ||
+                            refPath.parentPath.parentPath.node.arguments[0].name
+                        }
                         at ${refLine}:${refCol}`
                     );
                     return true;

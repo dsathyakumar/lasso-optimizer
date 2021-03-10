@@ -5,14 +5,13 @@
 const { get } = require('@ebay/retriever');
 const traverse = require('@babel/traverse');
 const types = require('@babel/types');
-const nanoid = require('nanoid');
 const {
     isLassoModule,
     getObjectInfo,
     isRootFuncExpression,
     getLoaderObjectInfo,
     pruneReferencePaths,
-    getNextValidValue,
+    getNextValidValue
 } = require('./utils');
 
 const LASSO_PROP_TYPES = {
@@ -56,13 +55,17 @@ const walkForDependencies = (traversalPath, moduleNameAndPath) => {
                             by Terser/Uglify. Lasso-optimizer attempts to prune away such re-assigned paths,
                             so that they don't result in false "require" types. Starting pruning...`
                         );
-                        console.warn(`Number of B4 = ${referencedPaths.length}`);
+                        console.warn(
+                            `Number of B4 = ${referencedPaths.length}`
+                        );
                         referencedPaths = pruneReferencePaths(
                             referencedPaths,
                             paramBindings[paramBindingName].constantViolations,
                             moduleNameAndPath
                         );
-                        console.warn(`Number After = ${referencedPaths.length}`);
+                        console.warn(
+                            `Number After = ${referencedPaths.length}`
+                        );
                     }
                     referencedPaths.forEach(refPath => {
                         const refPathNode = refPath.node;
@@ -83,22 +86,46 @@ const walkForDependencies = (traversalPath, moduleNameAndPath) => {
                                             refPathNodeParent.arguments
                                                 .length === 1
                                         ) {
-                                            if (argsZero.value.indexOf('/') === -1 || argsZero.value.indexOf('$') === -1) {
-                                                console.warn(`Weird require path "${argsZero.value}" in "${moduleNameAndPath}". Will resolve if its a builtin..`);
+                                            if (
+                                                argsZero.value.indexOf('/') ===
+                                                    -1 ||
+                                                argsZero.value.indexOf('$') ===
+                                                    -1
+                                            ) {
+                                                console.warn(
+                                                    `Weird require path "${argsZero.value}" in "${moduleNameAndPath}". Will resolve if its a builtin..`
+                                                );
                                             }
                                             global.___deps.deps.push(
                                                 argsZero.value
                                             );
                                         } else {
-                                            if (refPathNodeParent.arguments.length > 1) {
+                                            if (
+                                                refPathNodeParent.arguments
+                                                    .length > 1
+                                            ) {
                                                 // require call is not a String Literal
-                                                console.error(`Cannot optimize multi-argument require() in ${moduleNameAndPath} with args0= "${argsZero.value || argsZero.name}"`);
-                                            } else if (refPathNodeParent.arguments.length === 0) {
-                                                throw new Error(`Cannot optimize empty require()`);
-                                            } else if (!(types.isStringLiteral(argsZero))) {
+                                                console.error(
+                                                    `Cannot optimize multi-argument require() in ${moduleNameAndPath} with args0= "${
+                                                        argsZero.value ||
+                                                        argsZero.name
+                                                    }"`
+                                                );
+                                            } else if (
+                                                refPathNodeParent.arguments
+                                                    .length === 0
+                                            ) {
+                                                throw new Error(
+                                                    `Cannot optimize empty require()`
+                                                );
+                                            } else if (
+                                                !types.isStringLiteral(argsZero)
+                                            ) {
                                                 // require call is not a String Literal
                                                 // eslint-disable-next-line max-len
-                                                console.warn(`Cannot optimize Dynamic require() "${argsZero.name}" in ${moduleNameAndPath}`);
+                                                console.warn(
+                                                    `Cannot optimize Dynamic require() "${argsZero.name}" in ${moduleNameAndPath}`
+                                                );
                                             }
                                         }
                                     }
@@ -106,14 +133,18 @@ const walkForDependencies = (traversalPath, moduleNameAndPath) => {
                                     // log
                                     console.warn('unknown type of require');
                                 }
-                            } else if (types.isMemberExpression(refPathNodeParent)) {
+                            } else if (
+                                types.isMemberExpression(refPathNodeParent)
+                            ) {
                                 if (
                                     refPathNodeParent.object.name ===
                                         paramBindings[paramBindingName]
                                             .identifier.name &&
-                                    refPathNodeParent.property.name === 'resolve'
+                                    refPathNodeParent.property.name ===
+                                        'resolve'
                                 ) {
-                                    const parentCallExprPath = refPath.parentPath.parentPath;
+                                    const parentCallExprPath =
+                                        refPath.parentPath.parentPath;
                                     const argsZero =
                                         parentCallExprPath.node.arguments[0];
                                     if (
@@ -122,7 +153,9 @@ const walkForDependencies = (traversalPath, moduleNameAndPath) => {
                                             .length === 1
                                     ) {
                                         // eslint-disable-next-line max-len
-                                        console.warn(`Resolving require.resolve() for ${argsZero.value} in ${moduleNameAndPath}`);
+                                        console.warn(
+                                            `Resolving require.resolve() for ${argsZero.value} in ${moduleNameAndPath}`
+                                        );
                                         // gather the string path in require.resolve()
                                         // we cannot handle dynamic require's here.
                                         // Its upto teams to be able to require both and then conditionally choose.
@@ -131,10 +164,14 @@ const walkForDependencies = (traversalPath, moduleNameAndPath) => {
                                         );
                                     } else {
                                         // eslint-disable-next-line max-len
-                                        throw new Error(`Cannot optimize dynamic require.resolve() in ${moduleNameAndPath}`);
+                                        throw new Error(
+                                            `Cannot optimize dynamic require.resolve() in ${moduleNameAndPath}`
+                                        );
                                     }
                                 } else {
-                                    console.warn('Not of type require.resolve()');
+                                    console.warn(
+                                        'Not of type require.resolve()'
+                                    );
                                 }
                             }
                         }
@@ -155,7 +192,9 @@ const getDependencies = (moduleNameAndPath, path) => {
                         walkForDependencies(traversalPath, moduleNameAndPath);
                     } catch (e) {
                         console.error(e.message);
-                        console.error(`moduleNameAndPath = ${moduleNameAndPath}`);
+                        console.error(
+                            `moduleNameAndPath = ${moduleNameAndPath}`
+                        );
                         global.___deps = undefined;
                     } finally {
                         // cos for a given Lasso Module, we know there is only one root CallExpression
@@ -190,16 +229,15 @@ const getLassoModulesData = (path, generator) => {
                 const modulePathToVarRef = args[0].value
                     .replace(new RegExp('/', 'g'), '__')
                     .replace('$', '_')
+                    .replace('@', '9999')
                     .replace('[', '_')
                     .replace(']', '_')
                     .replace(/\./g, '_')
                     .replace(/\-/g, '_');
 
-                const altid = getNextValidValue(generator);
                 data.path = args[0].value;
                 data.modulePathToVarRef = modulePathToVarRef;
-                data.altid = '_f.' + altid;
-                data.reserved = altid;
+                data.altid = getNextValidValue(generator);
 
                 if (types.isFunctionExpression(args[1])) {
                     data.dependencies = getDependencies(args[0].value, path);
@@ -471,7 +509,8 @@ const traverseExpressionStatement = (exprStatementPathNode, generator) => {
 
 const grabInfoFromAst = (ast, noconflict, pathInfo, generator) => {
     if (ast) {
-        const lassoModulesMeta = pathInfo || Object.assign({}, LASSO_PROP_TYPES);
+        const lassoModulesMeta =
+            pathInfo || Object.assign({}, LASSO_PROP_TYPES);
 
         traverse.default(ast, {
             enter(traversalPath) {
@@ -487,7 +526,9 @@ const grabInfoFromAst = (ast, noconflict, pathInfo, generator) => {
 
                     if (isRaptorModulesClient) {
                         // eslint-disable-next-line prettier/prettier
-                        console.info(`Raptor modules client. Not resolving this. Skipping..`);
+                        console.info(
+                            `Raptor modules client. Not resolving this. Skipping..`
+                        );
                         lassoModulesMeta.raptorVariableName = raptorVariableName;
                         traversalPath.parentPath.addComment(
                             'leading',
@@ -556,7 +597,6 @@ const grabInfoFromAst = (ast, noconflict, pathInfo, generator) => {
                         // here since we are collecting info, we are only interested in Lasso Modules
                         // and not the lasso-moudles-client runtime.
                         const {
-                            reserved,
                             type,
                             subtype,
                             path,
@@ -576,17 +616,10 @@ const grabInfoFromAst = (ast, noconflict, pathInfo, generator) => {
                         } = data;
 
                         if (type === 'def') {
-                            let referentialId = '';
-                            // For object expressions we create a refID's as they cannot be accessed as func.name
-                            if (subtype !== 'FunctionExpression' && subtype === 'ObjectExpression') {
-                                referentialId = nanoid(7);
-                            }
                             lassoModulesMeta.def[path] = {
-                                reserved,
                                 modulePathToVarRef,
                                 dependencies,
                                 subtype,
-                                referentialId,
                                 altid
                             };
                         } else if (type === 'main') {
@@ -628,33 +661,6 @@ const grabInfoFromAst = (ast, noconflict, pathInfo, generator) => {
     }
 };
 
-// Basically this aims at unfurling an Expression Statement of Type Sequence Expression
-// which acts as a container of Expression Statements
-// const sanitizeAst = ast => {
-//     traverse.default(ast, {
-//         enter(traversalPath) {
-//             if (types.isExpressionStatement(traversalPath.node)) {
-//                 const expression = traversalPath.node.expression;
-//                 if (types.isSequenceExpression(expression)) {
-//                     const expressionsList = expression.expressions;
-//                     const expressionStatements = expressionsList.filter(exp => {
-//                         if (exp.type === 'CallExpression' || exp.type === 'UnaryExpression') {
-//                             if (exp.type === 'CallExpression') {
-
-//                             } else {
-
-//                             }
-//                             return types.expressionStatement(exp);
-//                         }
-//                     })
-//                     traversalPath.replaceWithMultiple(expressionStatements);
-//                 }
-//             }
-//         }
-//     });
-// };
-
-// exports.sanitizeAst = sanitizeAst;
 exports.getLassoModulesData = getLassoModulesData;
 exports.grabInfoFromAst = grabInfoFromAst;
 exports.traverseExpressionStatement = traverseExpressionStatement;

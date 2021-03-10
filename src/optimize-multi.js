@@ -2,12 +2,12 @@
 
 const { parse } = require('@babel/parser');
 const generate = require('@babel/generator');
-const { grabInfoFromAst, LASSO_PROP_TYPES, sanitizeAst } = require('./ast-walker-scanner');
+const { grabInfoFromAst, LASSO_PROP_TYPES } = require('./ast-walker-scanner');
 const { resolvePaths } = require('./paths-resolver');
 const { walkAstAndReplace } = require('./ast-walker-replacer');
 const { injectClient } = require('./lasso-modules-client-shim-multi');
 const { addWrapper } = require('./lasso-modules-wrapper-shim');
-const { version } = require('../package.json')
+const { version } = require('../package.json');
 const { propGenerator } = require('./generator');
 
 const init = (codeArr, noConflictLassoVar) => {
@@ -18,14 +18,14 @@ const init = (codeArr, noConflictLassoVar) => {
     }
 
     if (!Array.isArray(codeArr)) {
+        console.error('Expects an array of files & code');
         return;
     }
 
     let outputFileArr = null;
     const pathInfo = Object.assign({}, LASSO_PROP_TYPES);
-    let reserved = null;
-    try {
 
+    try {
         const astFileArr = codeArr.map(codeFile => {
             const ast = parse(codeFile.code, {
                 sourceType: 'script'
@@ -38,12 +38,17 @@ const init = (codeArr, noConflictLassoVar) => {
 
         if (astFileArr.length) {
             astFileArr.forEach(astFileObj => {
-                grabInfoFromAst(astFileObj.ast, noConflictLassoVar, pathInfo, generator);
+                grabInfoFromAst(
+                    astFileObj.ast,
+                    noConflictLassoVar,
+                    pathInfo,
+                    generator
+                );
             });
         }
 
-        const { dependencyPathToVarName, meta, reservedCollection } = resolvePaths(pathInfo);
-        reserved = reservedCollection;
+        const { dependencyPathToVarName, meta } = resolvePaths(pathInfo);
+
         const modifiedAstFileArr = astFileArr.map(astFileObj => {
             const modifiedAst = walkAstAndReplace(
                 astFileObj.ast,
@@ -65,28 +70,31 @@ const init = (codeArr, noConflictLassoVar) => {
             return {
                 ...modifiedAstFileObj,
                 output
-            }
+            };
         });
-        
     } catch (e) {
         console.error(e.message);
-        console.error(`Resetting output to undefined so that default code is returned`);
+        console.error(
+            `Resetting output to undefined so that default code is returned`
+        );
         outputFileArr = undefined;
     }
 
     return {
-        reserved,
         outputFileArr,
         lassoVariableName: pathInfo.variableName
     };
 };
 
-exports.optimizeMulti = (codeArr, noConflictLassoVar, shouldInjectClient = true) => {
+exports.optimizeMulti = (
+    codeArr,
+    noConflictLassoVar,
+    shouldInjectClient = true
+) => {
     const {
         outputFileArr,
         // eslint-disable-next-line prefer-const
-        lassoVariableName,
-        reserved
+        lassoVariableName
     } = init(codeArr, noConflictLassoVar);
 
     if (typeof outputFileArr === 'undefined') {
@@ -101,16 +109,21 @@ exports.optimizeMulti = (codeArr, noConflictLassoVar, shouldInjectClient = true)
 
     if (shouldInjectClient) {
         outputFileArr.forEach((outFile, idx) => {
-            if (idx === 0){
-                outFile.output.code = injectClient(outFile.output.code, (noConflictLassoVar || lassoVariableName));
+            if (idx === 0) {
+                outFile.output.code = injectClient(
+                    outFile.output.code,
+                    noConflictLassoVar || lassoVariableName
+                );
             } else {
-                outFile.output.code = addWrapper(outFile.output.code, (noConflictLassoVar || lassoVariableName));
+                outFile.output.code = addWrapper(
+                    outFile.output.code,
+                    noConflictLassoVar || lassoVariableName
+                );
             }
         });
     }
 
     return {
-        outputFileArr,
-        reserved
+        outputFileArr
     };
 };

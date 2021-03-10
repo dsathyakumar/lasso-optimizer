@@ -2,9 +2,9 @@
 
 const addWrapper = (code, varName) => `
 /* eslint-disable */
-!(function(_f, run) {
+!(function(get, set, run) {
     ${code}
-})(${varName}.l, ${varName}.run);
+})(${varName}.get, ${varName}.set, ${varName}.run);
 `;
 
 exports.addWrapper = addWrapper;

@@ -29,8 +29,7 @@ const resolvePath = (path, meta) => {
             // now passes both the altID and the modulePathToVarRef
             resolvedVarName = {
                 modulePathToVarRef: meta.def[path].modulePathToVarRef,
-                altid: meta.def[path].altid,
-                reserved: meta.def[path].reserved
+                altid: meta.def[path].altid
             };
         } else if (meta.main[path]) {
             const mainPath = meta.main[path] + meta.main[path].main || '/index';
@@ -87,7 +86,9 @@ const getInstalledVersion = (
     }
 
     if (typeof installedDepsList === 'undefined') {
-        console.warn(`Nothing installed for module ${modNameVerPath} and ${modNameAndVersion}`);
+        console.warn(
+            `Nothing installed for module ${modNameVerPath} and ${modNameAndVersion}`
+        );
         return '';
     }
 
@@ -189,7 +190,9 @@ const resolver = (modNameVerPath, depNameVerPath, meta) => {
             if (builtInPath) {
                 resolvedVarName = resolvePath(builtInPath, meta);
                 if (!resolvedVarName) {
-                    console.error(`Def not available in builtin for ${depNameVerPath}`);
+                    console.error(
+                        `Def not available in builtin for ${depNameVerPath}`
+                    );
                 } else {
                     // eslint-disable-next-line no-console
                     console.info(`Def exists as builtin for ${depNameVerPath}`);
@@ -201,7 +204,9 @@ const resolver = (modNameVerPath, depNameVerPath, meta) => {
 
         // attempting a final passthrough here, to see if it can be resolved from .defs
         if (!resolvedVarName) {
-            console.warn(`${depNameVerPath} is still not resolved. Attempting a final pass..`);
+            console.warn(
+                `${depNameVerPath} is still not resolved. Attempting a final pass..`
+            );
             resolvedVarName = resolvePath(depNameVerPath, meta);
         }
     }
@@ -227,7 +232,7 @@ const resolver = (modNameVerPath, depNameVerPath, meta) => {
 const resolvePaths = lassoModulesMeta => {
     // eslint-disable-next-line compat/compat
     const meta = Object.assign({}, lassoModulesMeta);
-    const reservedCollection = new Set();
+
     const dependencyPathToVarName = {};
 
     if (Object.keys(meta.def).length) {
@@ -239,22 +244,29 @@ const resolvePaths = lassoModulesMeta => {
                 // else, its a new un-recognized type yet.
                 // So far we know a .def can contain either a FunctionExpression type or an ObjectExpressionType.
                 if (!('dependencies' in meta.def[modulePath])) {
-                    throw new Error(`"Dependencies" is undefined in ${modulePath}. Possibly a new type in .def`);
+                    throw new Error(
+                        `"Dependencies" is undefined in ${modulePath}. Possibly a new type in .def`
+                    );
                 }
                 // loop over dependencies + resolve paths
                 // all module dependencies paths and resolveables have to be resolved.
                 let dependencies = meta.def[modulePath].dependencies.deps;
-                dependencies = dependencies.concat(meta.def[modulePath].dependencies.resolve);
+                dependencies = dependencies.concat(
+                    meta.def[modulePath].dependencies.resolve
+                );
                 if (dependencies.length) {
                     meta.def[modulePath].dependencies.finalize = {};
                     dependencies.forEach(dep => {
                         if (!dependencyPathToVarName[dep]) {
-                            const resolvedVarName = resolver(modulePath, dep, meta);
+                            const resolvedVarName = resolver(
+                                modulePath,
+                                dep,
+                                meta
+                            );
                             dependencyPathToVarName[dep] = resolvedVarName;
                             meta.def[modulePath].dependencies.finalize[
                                 dep
                             ] = resolvedVarName;
-                            reservedCollection.add(resolvedVarName.reserved);
                         } else {
                             meta.def[modulePath].dependencies.finalize[dep] =
                                 dependencyPathToVarName[dep];
@@ -271,10 +283,13 @@ const resolvePaths = lassoModulesMeta => {
             defKeys.forEach(modulePath => {
                 const dependencies = meta.def[modulePath].dependencies.deps;
                 if (dependencies.length) {
-                    const finalized = meta.def[modulePath].dependencies.finalize;
+                    const finalized =
+                        meta.def[modulePath].dependencies.finalize;
                     dependencies.forEach(dependency => {
                         if (!finalized[dependency]) {
-                            throw new Error(`${dependency} not found in ${modulePath} finalized`);
+                            throw new Error(
+                                `${dependency} not found in ${modulePath} finalized`
+                            );
                         }
                     });
                 }
@@ -289,21 +304,19 @@ const resolvePaths = lassoModulesMeta => {
         const runKeys = Object.keys(meta.run);
         runKeys.forEach(runnableModPath => {
             if (!dependencyPathToVarName[runnableModPath]) {
-                const resolvedPath = resolvePath(
-                    runnableModPath,
-                    meta
-                )
+                const resolvedPath = resolvePath(runnableModPath, meta);
                 dependencyPathToVarName[runnableModPath] = resolvedPath;
-                reservedCollection.add(resolvedPath.reserved);
             }
             // Then this runnable depends on another module, which also has to be resolved.
             if (typeof runKeys[runnableModPath] === 'string') {
                 if (!dependencyPathToVarName[runKeys[runnableModPath]]) {
-                    const resolvedPath = resolvePath(runKeys[runnableModPath], meta);
+                    const resolvedPath = resolvePath(
+                        runKeys[runnableModPath],
+                        meta
+                    );
                     dependencyPathToVarName[
                         runKeys[runnableModPath]
                     ] = resolvedPath;
-                    reservedCollection.add(resolvedPath.reserved);
                 }
             }
         });
@@ -314,8 +327,7 @@ const resolvePaths = lassoModulesMeta => {
 
     return {
         dependencyPathToVarName,
-        meta,
-        reservedCollection
+        meta
     };
 };
 

@@ -28,7 +28,12 @@ const init = (code, noConflictLassoVar) => {
             sourceType: 'script'
         });
 
-        pathInfo = grabInfoFromAst(ast, noConflictLassoVar, undefined, generator);
+        pathInfo = grabInfoFromAst(
+            ast,
+            noConflictLassoVar,
+            undefined,
+            generator
+        );
 
         const { dependencyPathToVarName, meta } = resolvePaths(pathInfo);
 
@@ -45,7 +50,9 @@ const init = (code, noConflictLassoVar) => {
         });
     } catch (e) {
         console.error(e.message);
-        console.error(`Resetting output to undefined so that default code is returned`);
+        console.error(
+            `Resetting output to undefined so that default code is returned`
+        );
         output = undefined;
     }
 
@@ -55,7 +62,11 @@ const init = (code, noConflictLassoVar) => {
     };
 };
 
-exports.optimizeSingle = (code, noConflictLassoVar, shouldInjectClient = true) => {
+exports.optimizeSingle = (
+    code,
+    noConflictLassoVar,
+    shouldInjectClient = true
+) => {
     const {
         output,
         // eslint-disable-next-line prefer-const
@@ -73,7 +84,10 @@ exports.optimizeSingle = (code, noConflictLassoVar, shouldInjectClient = true) =
     }
 
     if (shouldInjectClient && output.code) {
-        output.code = injectClient(output.code, (noConflictLassoVar || lassoVariableName));
+        output.code = injectClient(
+            output.code,
+            noConflictLassoVar || lassoVariableName
+        );
     }
 
     return output;

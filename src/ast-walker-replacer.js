@@ -18,41 +18,22 @@ const getPathToVarRef = (moduleNameAndPath, argsZero, meta) => {
     // from the finalized list, get what this path maps to
     // For eg) require('/marko$4.20.1/dist/components/runtime')
     let pathToVariableRef =
-        meta.def[moduleNameAndPath]
-            .dependencies.finalize[
-                argsZero.value
-            ];
+        meta.def[moduleNameAndPath].dependencies.finalize[argsZero.value];
 
     // ideally it should have been resolved already. Else throw
     if (!pathToVariableRef) {
-        throw new Error(
-            `Unresolved dependency ${moduleNameAndPath}`
-        );
+        throw new Error(`Unresolved dependency ${moduleNameAndPath}`);
     }
 
-    // check if it was scoped, get rid of @ and replace with 9999
-    if (
-        pathToVariableRef && pathToVariableRef.modulePathToVarRef.indexOf(
-            '@'
-        ) !== -1
-    ) {
-        console.info(
-            `old pathToVariableRef = ${pathToVariableRef.modulePathToVarRef}`
-        );
-        pathToVariableRef.modulePathToVarRef = pathToVariableRef.modulePathToVarRef.replace(
-            '@',
-            '9999'
-        );
-        console.info(
-            `new pathToVariableRef = ${pathToVariableRef.modulePathToVarRef}`
-        );
-    }
     console.info(
         // eslint-disable-next-line max-len
         `Replaced require('${argsZero.value}') with require(${pathToVariableRef.altid})`
     );
 
-    return pathToVariableRef.altid;
+    return {
+        altid: pathToVariableRef.altid,
+        modulePathToVarRef: pathToVariableRef.modulePathToVarRef
+    };
 };
 
 const walkForDependencies = (traversalPath, meta, moduleNameAndPath) => {
@@ -84,13 +65,17 @@ const walkForDependencies = (traversalPath, meta, moduleNameAndPath) => {
                             by Terser/Uglify. Lasso-optimizer attempts to prune away such re-assigned paths,
                             so that they don't result in false "require" types. Starting pruning...`
                         );
-                        console.warn(`Number of B4 = ${referencedPaths.length}`);
+                        console.warn(
+                            `Number of B4 = ${referencedPaths.length}`
+                        );
                         referencedPaths = pruneReferencePaths(
                             referencedPaths,
                             paramBindings[paramBindingName].constantViolations,
                             moduleNameAndPath
                         );
-                        console.warn(`Number After = ${referencedPaths.length}`);
+                        console.warn(
+                            `Number After = ${referencedPaths.length}`
+                        );
                     }
 
                     referencedPaths.forEach(refPath => {
@@ -123,36 +108,36 @@ const walkForDependencies = (traversalPath, meta, moduleNameAndPath) => {
                                             refPathNodeParent.arguments
                                                 .length === 1
                                         ) {
-                                            const pathToVariableRef =
-                                                getPathToVarRef(moduleNameAndPath, argsZero, meta);
-
-                                            refPathNodeParent.arguments.pop();
-
-                                            // replace the require path with the identifier.
-                                            // All thgese require paths are of String types and so refer to a Func Dec
-                                            // which can be accessed as func.name
-                                            refPathNodeParent.arguments.push(
-                                                types.identifier(
-                                                    pathToVariableRef
-                                                )
+                                            const pathToVariableRef = getPathToVarRef(
+                                                moduleNameAndPath,
+                                                argsZero,
+                                                meta
                                             );
 
-                                            // push the refId as well if its a JSON type require.
-                                            if (meta.def[argsZero.value] && 'subtype' in meta.def[argsZero.value] && meta.def[argsZero.value].subtype === 'ObjectExpression'
-                                                && meta.def[argsZero.value].referentialId) {
-                                                refPathNodeParent.arguments.push(
-                                                    types.stringLiteral(
-                                                        meta.def[argsZero.value].referentialId
-                                                    )
-                                                );
-                                            }
+                                            refPathNodeParent.arguments.pop();
+                                            refPath.addComment(
+                                                'leading',
+                                                `id: ${pathToVariableRef.altid}, module: ${pathToVariableRef.modulePathToVarRef}`
+                                            );
+                                            // replace the require path with get(numeriliteral).
+                                            refPathNodeParent.arguments.push(
+                                                types.callExpression(
+                                                    types.identifier('get'),
+                                                    [
+                                                        types.numericLiteral(
+                                                            pathToVariableRef.altid
+                                                        )
+                                                    ]
+                                                )
+                                            );
                                         } else {
                                             // thsi could be an identifier or a member expression or even
                                             // a function expression that returns a value. NO idea!
-                                            if (!types.isStringLiteral(argsZero)) {
+                                            if (
+                                                !types.isStringLiteral(argsZero)
+                                            ) {
                                                 console.warn(`
-                                                    Possible Dynamic Require() -> "${argsZero.name}" at ${moduleNameAndPath}`
-                                                );
+                                                    Possible Dynamic Require() -> "${argsZero.name}" at ${moduleNameAndPath}`);
                                             }
                                         }
                                     }
@@ -160,15 +145,19 @@ const walkForDependencies = (traversalPath, meta, moduleNameAndPath) => {
                                     // log
                                     console.warn('unknown type of require');
                                 }
-                            } else if (types.isMemberExpression(refPathNodeParent)) {
+                            } else if (
+                                types.isMemberExpression(refPathNodeParent)
+                            ) {
                                 // check if its of type .resolve
                                 if (
                                     refPathNodeParent.object.name ===
                                         paramBindings[paramBindingName]
                                             .identifier.name &&
-                                    refPathNodeParent.property.name === 'resolve'
+                                    refPathNodeParent.property.name ===
+                                        'resolve'
                                 ) {
-                                    const parentCallExprPath = refPath.parentPath.parentPath;
+                                    const parentCallExprPath =
+                                        refPath.parentPath.parentPath;
                                     const argsZero =
                                         parentCallExprPath.node.arguments[0];
 
@@ -179,58 +168,62 @@ const walkForDependencies = (traversalPath, meta, moduleNameAndPath) => {
                                             .length === 1
                                     ) {
                                         let identifierName = '';
+
+                                        // else if it resolves to a Function Expression
+                                        identifierName = getPathToVarRef(
+                                            moduleNameAndPath,
+                                            argsZero,
+                                            meta
+                                        );
                                         parentCallExprPath.node.arguments.pop();
+                                        refPath.addComment(
+                                            'leading',
+                                            `id: ${identifierName.altid}, module: ${identifierName.modulePathToVarRef}`
+                                        );
 
-                                        // if the resolve maps to a Object expression
-                                        if (meta.def[argsZero.value].subtype === 'ObjectExpression') {
-                                            if (meta.def[argsZero.value].referentialId) {
-                                                identifierName = meta.def[argsZero.value].referentialId;
-                                                // replace the args of require.resolve call with either
-                                                // refID -> StringLiteral
-                                                // Fr eg) require.resolve('_e53tybxw');
-                                                parentCallExprPath.node.arguments.push(
-                                                    types.stringLiteral(
-                                                        identifierName
-                                                    )
-                                                );
-                                            } else {
-                                                throw new Error(`RefID not found`);
-                                            }
-                                        } else if (meta.def[argsZero.value].subtype === 'FunctionExpression') {
-                                            // else if it resolves to a Function Expression
-                                            identifierName = getPathToVarRef(moduleNameAndPath, argsZero, meta);
-                                            if (!identifierName) {
-                                                throw new Error(`${moduleNameAndPath} not resolved in require()`);
-                                            }
-
-                                            // here it should be replaced by a MemberExpression of
-                                            // identifierName.name
-                                            // Fr eg) require.resolve(__webresourcejs_1_0_1__dist__file.name);
-                                            // Runtime, __webresourcejs_1_0_1__dist__file.name will resolve
-                                            // to a string of the function declaration name
-                                            parentCallExprPath.node.arguments.push(
-                                                types.memberExpression(
-                                                    types.identifier(identifierName),
-                                                    types.identifier('name')
-                                                )
+                                        if (!identifierName.altid) {
+                                            throw new Error(
+                                                `${moduleNameAndPath} not resolved in require()`
                                             );
                                         }
+
+                                        // here it should be replaced by a MemberExpression of
+                                        // identifierName.name
+                                        // Fr eg) require.resolve(__webresourcejs_1_0_1__dist__file.name);
+                                        // Runtime, __webresourcejs_1_0_1__dist__file.name will resolve
+                                        // to a string of the function declaration name
+                                        parentCallExprPath.node.arguments.push(
+                                            types.callExpression(
+                                                types.identifier('get'),
+                                                [
+                                                    types.numericLiteral(
+                                                        identifierName.altid
+                                                    )
+                                                ]
+                                            )
+                                        );
                                     } else {
                                         // mostly a dynamic require
                                         if (
-                                            !(types.isStringLiteral(argsZero)) &&
+                                            !types.isStringLiteral(argsZero) &&
                                             parentCallExprPath.node.arguments
                                                 .length === 1
                                         ) {
-                                            console.warn('This is a dynamic .resolve()');
+                                            console.warn(
+                                                'This is a dynamic .resolve()'
+                                            );
                                         }
                                     }
                                 } else {
-                                    console.warn('Not of type require.resolve()');
+                                    console.warn(
+                                        'Not of type require.resolve()'
+                                    );
                                 }
+                            } else {
+                                console.error('Unknow type');
                             }
                         } else {
-                            console.warn('ERR!!!! Unknown type');
+                            console.error('ERR!!!! Unknown type');
                         }
                     });
                 }
@@ -246,7 +239,7 @@ const fixDependencies = (moduleNameAndPath, path, meta) => {
                 if (isRootFuncExpression(traversalPath)) {
                     try {
                         // if (moduleNameAndPath === '/marko$4.15.0/dist/components/dom-data') {
-                            // debugger;
+                        // debugger;
                         // }
                         walkForDependencies(
                             traversalPath,
@@ -292,9 +285,13 @@ const getLassoModulesDataAndDefs = (path, meta) => {
                     // also note that only static require calls will be a part of deps and resolve
                     // if there was a module that had only dynamic calls, then it wont be listed here
                     // and this block wont even execute.
-                    if (meta.def[args[0].value].dependencies.deps.length ||
-                        meta.def[args[0].value].dependencies.resolve.length) {
-                        console.info(`Fixing deps & resolvables for ${args[0].value}`);
+                    if (
+                        meta.def[args[0].value].dependencies.deps.length ||
+                        meta.def[args[0].value].dependencies.resolve.length
+                    ) {
+                        console.info(
+                            `Fixing deps & resolvables for ${args[0].value}`
+                        );
                         fixDependencies(args[0].value, path, meta);
                     }
                     data.defParams = args[1].params;
@@ -302,6 +299,21 @@ const getLassoModulesDataAndDefs = (path, meta) => {
                 } else if (types.isObjectExpression(args[1])) {
                     // This is when a JSON file is part of the require.
                     data.objExpr = args[1];
+                }
+
+                // when globals are set in define. For eg) jQuery
+                if (args[2] && types.isObjectExpression(args[2])) {
+                    if (args[2].properties.length === 1) {
+                        const property = args[2].properties[0];
+                        if (
+                            types.isIdentifier(property.key) &&
+                            property.key.name === 'globals'
+                        ) {
+                            if (types.isArrayExpression(property.value)) {
+                                data.globals = args[2];
+                            }
+                        }
+                    }
                 }
             }
         } else if (lassoModuleType === 'remap') {
@@ -428,6 +440,7 @@ const walkAstAndReplace = (ast, dependencyPathToVarName, noconflict, meta) => {
                         // here since we are collecting info, we are only interested in Lasso Modules
                         // and not the lasso-moudles-client runtime.
                         const {
+                            globals,
                             type,
                             path,
                             from,
@@ -446,11 +459,16 @@ const walkAstAndReplace = (ast, dependencyPathToVarName, noconflict, meta) => {
                         if (type === 'def') {
                             console.info(`Replacing Def for ${path}`);
                             let modulePathToVarRef =
-                                (dependencyPathToVarName[path] && dependencyPathToVarName[path].modulePathToVarRef) ||
+                                (dependencyPathToVarName[path] &&
+                                    dependencyPathToVarName[path]
+                                        .modulePathToVarRef) ||
                                 meta.def[path].modulePathToVarRef;
-                            let reserved = (dependencyPathToVarName[path] && dependencyPathToVarName[path].reserved) ||
-                                meta.def[path].reserved;
-                            let altid = (dependencyPathToVarName[path] && dependencyPathToVarName[path].altid) || meta.def[path].altid;
+                            
+                            let altid =
+                                (dependencyPathToVarName[path] &&
+                                    dependencyPathToVarName[path]
+                                        .altid) ||
+                                meta.def[path].altid;
 
                             if (!modulePathToVarRef) {
                                 throw new Error(
@@ -464,94 +482,69 @@ const walkAstAndReplace = (ast, dependencyPathToVarName, noconflict, meta) => {
                                 );
                             }
 
-                            // This is because functionNames cannot contain @, which are used in scoped packages
-                            if (modulePathToVarRef.indexOf('@') !== -1) {
-                                console.info(
-                                    `old modulePathToVarRef = ${modulePathToVarRef}`
-                                );
-                                modulePathToVarRef = modulePathToVarRef.replace(
-                                    '@',
-                                    '9999'
-                                );
-                                console.info(
-                                    `new modulePathToVarRef = ${modulePathToVarRef}`
-                                );
-                            }
-
                             // when its a factory function
                             if (defParams && defBodyDefn) {
-                                traversalPath.parentPath.addComment(
+                                traversalPath.addComment(
                                     'leading',
                                     // eslint-disable-next-line max-len
-                                    `Removing type: ${type} of ${path}. Replaced with function declaration ${modulePathToVarRef}`
+                                    `id = ${altid}. Removing type: ${type} of ${path}. Replaced with function declaration ${modulePathToVarRef}`
                                 );
 
-                                // replace function expr to func decl here.
-                                // we are no longer pruning params here.
-                                // any minifier / obfuscator like uglify / terser will clean it
-                                const funcDeclr = types.functionDeclaration(
-                                    types.identifier(reserved),
-                                    defParams,
-                                    defBodyDefn
-                                );
-                                // this basically set the scope bridge
-                                // _f.AA = <function name identifier>
-                                traversalPath.replaceWithMultiple([
-                                    funcDeclr,
-                                    types.expressionStatement(types.assignmentExpression(
-                                        '=',
-                                        types.memberExpression(
-                                            types.identifier(
-                                                '_f'
-                                            ),
-                                            types.identifier(
-                                                altid.split('.')[1]
-                                            )
-                                        ),
-                                        types.identifier(
-                                            reserved
-                                        )
-                                    ))
-                                ]);
-                            } else if (objExpr) {
-                                const refId = meta.def[path].referentialId;
+                                const args = [
+                                    types.functionExpression(
+                                        types.identifier(modulePathToVarRef),
+                                        defParams,
+                                        defBodyDefn
+                                    )
+                                ];
 
-                                if (!refId) {
-                                    throw new Error(`referentialId missing for object expression of ${path}`);
+                                if (globals) {
+                                    args.push(globals);
                                 }
 
-                                traversalPath.parentPath.addComment(
+                                // this basically set the scope bridge
+                                traversalPath.replaceWithMultiple([
+                                    types.expressionStatement(
+                                        types.CallExpression(
+                                            types.identifier('set'),
+                                            args
+                                        )
+                                    )
+                                ]);
+                            } else if (objExpr) {
+                                traversalPath.addComment(
                                     'leading',
                                     // eslint-disable-next-line max-len
-                                    `Removing type: ${type} of ${path}. Replaced with variable declaration ${modulePathToVarRef} & refId = ${refId}`
+                                    `id = ${altid}, Removing type: ${type} of ${path}. Replaced with variable declaration ${modulePathToVarRef}`
                                 );
                                 // when its an object expression
                                 // say when a JSON file is required.
                                 // even this we store with the modulePathToVarRef, but a require to this
                                 // will also pass the refID, so we check for refID above. Cos, this cannot be
                                 // accessed as func.name & there is no way to get the name of the variable Identifier
-                                const varDeclaration = types.variableDeclaration('var', [
-                                    types.variableDeclarator(
-                                        types.identifier(modulePathToVarRef),
-                                        objExpr
-                                    )
-                                ]);
+                                const varDeclaration = types.variableDeclaration(
+                                    'var',
+                                    [
+                                        types.variableDeclarator(
+                                            types.identifier(
+                                                modulePathToVarRef
+                                            ),
+                                            objExpr
+                                        )
+                                    ]
+                                );
                                 traversalPath.replaceWithMultiple([
                                     varDeclaration,
-                                    types.expressionStatement(types.assignmentExpression(
-                                        '=',
-                                        types.memberExpression(
-                                            types.identifier(
-                                                '_f'
-                                            ),
-                                            types.identifier(
-                                                altid.split('.')[1]
-                                            )
-                                        ),
-                                        types.identifier(
-                                            modulePathToVarRef
+                                    types.expressionStatement(
+                                        types.CallExpression(
+                                            types.identifier('set'),
+                                            [
+                                                types.identifier(
+                                                    modulePathToVarRef
+                                                )
+                                            ]
                                         )
-                                    ))
+                                    )
                                 ]);
                             } else {
                                 console.warn('No idea what .def this is');
@@ -581,50 +574,44 @@ const walkAstAndReplace = (ast, dependencyPathToVarName, noconflict, meta) => {
                             );
                             traversalPath.remove();
                         } else if (type === 'run') {
-                            traversalPath.parentPath.addComment(
-                                'leading',
-                                `Removing type: ${type} of ${path}. Self-invocation injected`
-                            );
-
+                            let altid =
+                                (dependencyPathToVarName[path] &&
+                                    dependencyPathToVarName[path].altid) ||
+                                meta.def[path].altid;
                             let modulePathToVarRef =
-                                (dependencyPathToVarName[path] && dependencyPathToVarName[path].modulePathToVarRef) ||
+                                (dependencyPathToVarName[path] &&
+                                    dependencyPathToVarName[path]
+                                        .modulePathToVarRef) ||
                                 meta.def[path].modulePathToVarRef;
-                            let reserved = (dependencyPathToVarName[path] && dependencyPathToVarName[path].reserved) ||
-                                meta.def[path].reserved;
 
-                            if (!modulePathToVarRef) {
-                                throw new Error(
-                                    `Ast-modification failed. ${path} missing modulePathToVarRef`
-                                );
-                            }
-
-                            if (modulePathToVarRef.indexOf('@') !== -1) {
-                                console.info(
-                                    `old modulePathToVarRef = ${modulePathToVarRef}`
-                                );
-                                modulePathToVarRef = modulePathToVarRef.replace(
-                                    '@',
-                                    '9999'
-                                );
-                                console.info(
-                                    `new modulePathToVarRef = ${modulePathToVarRef}`
-                                );
-                            }
+                            traversalPath.addComment(
+                                'leading',
+                                `Removing type: ${type} of ${path}. Self-invocation injected for id=${altid} of ${modulePathToVarRef}`
+                            );
 
                             // if not a string, by default runOption is an ObjectExpression
                             // with a wait property set.
                             if (typeof runOptions === 'string') {
                                 // this is a path & has to be resolved
-                                runOptions =
-                                    dependencyPathToVarName[runOptions].reserved;
+                                const optionalAltId =
+                                    (dependencyPathToVarName[runOptions] &&
+                                        dependencyPathToVarName[runOptions]
+                                            .altid) ||
+                                    meta.def[runOptions].altid;
                                 // it has to be an identifier
-                                runOptions = types.identifier(runOptions);
+                                runOptions = types.callExpression(
+                                    types.identifier('get'),
+                                    [types.numericLiteral(optionalAltId)]
+                                );
                             }
 
                             const callExprArgs = [
-                                types.identifier(reserved)
+                                types.callExpression(types.identifier('get'), [
+                                    types.numericLiteral(altid)
+                                ])
                             ];
 
+                            // if it was an obj expression, send it by default
                             if (typeof runOptions !== 'undefined') {
                                 callExprArgs.push(runOptions);
                             }
